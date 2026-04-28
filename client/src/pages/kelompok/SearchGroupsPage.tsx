@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import { apiRequest, type ApiListResponse, type GroupItem } from '../config/api'
-import '../styles/SearchPage.css'
+import Header from '../../components/Header'
+import Footer from '../../components/Footer'
+import { apiRequest, type ApiListResponse, type GroupItem } from '../../config/api'
+import '../../styles/SearchPage.css'
 
 export default function SearchGroupsPage() {
   const [searchTerm, setSearchTerm] = useState('')

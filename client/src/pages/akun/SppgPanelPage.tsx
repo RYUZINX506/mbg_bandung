@@ -7,10 +7,15 @@ import '../../styles/RolePanelPage.css'
 type ProfileForm = Record<string, string>
 type ReportForm = Record<string, string>
 
+
+type DistribusiPhotoState = {
+  menu: File | null
+}
 const emptyProfileForm = (): ProfileForm => ({})
 const emptyReportForm = (): ReportForm => ({})
 
 export default function SppgPanelPage() {
+  const [distribusiPhoto, setDistribusiPhoto] = useState<DistribusiPhotoState>({ menu: null })
   const navigate = useNavigate()
   const token = localStorage.getItem('mbg_token')
   const [panel, setPanel] = useState<PanelResponse['data'] | null>(null)
@@ -134,16 +139,29 @@ export default function SppgPanelPage() {
     setError('')
 
     try {
+      if (!distribusiPhoto.menu) {
+        setSavingReport(false)
+        setError('Foto menu wajib diunggah.')
+        return
+      }
+
+      const formData = new FormData()
+      Object.entries(reportForm).forEach(([key, value]) => {
+        formData.append(key, value ?? '')
+      })
+      formData.append('foto_menu', distribusiPhoto.menu)
+
       const response = await apiRequest<{ message: string }>('/panel/distribution', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(reportForm),
+        body: formData,
       })
 
       setMessage(response.message)
       setReportForm(emptyReportForm())
+      setDistribusiPhoto({ menu: null })
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Gagal menyimpan laporan.')
     } finally {
@@ -288,6 +306,21 @@ export default function SppgPanelPage() {
                 Menu
                 <textarea value={reportForm.menu ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, menu: event.target.value }))} />
               </label>
+
+              <label>
+                Foto Menu (JPG/PNG)
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  required
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null
+                    setDistribusiPhoto({ menu: file })
+                  }}
+                />
+                {distribusiPhoto.menu && <span>File: {distribusiPhoto.menu.name}</span>}
+              </label>
+
               <label>
                 Kategori Menu
                 <input value={reportForm.kategori_menu ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, kategori_menu: event.target.value }))} />

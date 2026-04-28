@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import { apiRequest, type ApiDetailResponse, type GroupDetail } from '../config/api'
-import '../styles/GroupDetailPage.css'
+import Header from '../../components/Header'
+import Footer from '../../components/Footer'
+import { apiRequest, type ApiDetailResponse, type GroupDetail } from '../../config/api'
+import '../../styles/GroupDetailPage.css'
 
 export default function GroupDetailPage() {
   const { id } = useParams()

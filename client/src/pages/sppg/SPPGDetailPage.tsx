@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import { apiRequest, type ApiDetailResponse, type SppgDetail } from '../config/api'
-import '../styles/SPPGDetailPage.css'
+import Header from '../../components/Header'
+import Footer from '../../components/Footer'
+import { apiRequest, type ApiDetailResponse, type SppgDetail } from '../../config/api'
+import '../../styles/SPPGDetailPage.css'
 
 export default function SPPGDetailPage() {
   const { id } = useParams()

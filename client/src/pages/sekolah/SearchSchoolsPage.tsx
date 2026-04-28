@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import { apiRequest, type ApiListResponse, type SchoolItem } from '../config/api'
-import '../styles/SearchPage.css'
+import Header from '../../components/Header'
+import Footer from '../../components/Footer'
+import { apiRequest, type ApiListResponse, type SchoolItem } from '../../config/api'
+import '../../styles/SearchPage.css'
 
 export default function SearchSchoolsPage() {
   const [searchTerm, setSearchTerm] = useState('')

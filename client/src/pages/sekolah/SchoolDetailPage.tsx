@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import { apiRequest, type ApiDetailResponse, type SchoolDetail } from '../config/api'
-import '../styles/SchoolDetailPage.css'
+import Header from '../../components/Header'
+import Footer from '../../components/Footer'
+import { apiRequest, type ApiDetailResponse, type SchoolDetail } from '../../config/api'
+import '../../styles/SchoolDetailPage.css'
 
 function getTodayInputValue() {
   const now = new Date()

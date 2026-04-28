@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchDashboardStats, fetchHomeSummary, fetchTableCount } from './apiDashboard'
-import '../styles/AdminPanelPage.css'
+import { fetchDashboardStats, fetchHomeSummary, fetchTableCount } from '../apiDashboard'
+import '../../styles/AdminPanelPage.css'
 
 export default function DashboardPage() {
   const token = localStorage.getItem('mbg_token')
