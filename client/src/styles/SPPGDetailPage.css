@@ -104,7 +104,8 @@
 
 .sppg-stats-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
+  justify-content: center;
   gap: 0.95rem;
   margin-bottom: 1.4rem;
 }
@@ -298,6 +299,8 @@
 .photo-card {
   background: linear-gradient(145deg, #ffffff 0%, #f2f6fb 100%);
   border-color: rgba(148, 163, 184, 0.28);
+  display: grid;
+  place-items: center;
 }
 
 .map-placeholder {
@@ -360,8 +363,10 @@
 }
 
 .photo-card img {
-  width: min(100%, 420px);
-  height: 180px;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  max-height: 260px;
   object-fit: cover;
   border-radius: 14px;
 }

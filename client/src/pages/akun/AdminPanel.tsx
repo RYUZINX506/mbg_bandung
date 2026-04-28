@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { apiRequest } from '../config/api'
-import { PRIVATE_LOGIN_PATH } from '../config/privateRoutes'
-import '../styles/AdminPanelPage.css'
+import { apiRequest } from '../../config/api'
+import { PRIVATE_LOGIN_PATH } from '../../config/privateRoutes'
+import '../../styles/AdminPanelPage.css'
 
 type AdminStatsResponse = {
   data: {
@@ -80,7 +80,7 @@ const formatValue = (value: unknown) => {
   return String(value)
 }
 
-export default function PanelPage() {
+export default function AdminPanel() {
   const token = localStorage.getItem('mbg_token')
   const [stats, setStats] = useState<AdminStatsResponse['data'] | null>(null)
   const [tables, setTables] = useState<AdminTableSchema[]>([])
@@ -330,6 +330,13 @@ export default function PanelPage() {
             <div className="admin-version">Database Modules</div>
 
             <nav className="admin-nav" aria-label="Modul dari database">
+              <a
+                href="/dashboard"
+                className="admin-nav-item"
+                style={{ display: 'flex', alignItems: 'center', fontWeight: 600 }}
+              >
+                Dashboard
+              </a>
               {tables.map((table) => (
                 <button
                   key={table.name}
@@ -495,6 +502,7 @@ export default function PanelPage() {
               <form className="admin-form-grid" onSubmit={handleSubmit}>
                 {editableColumns.map((column) => {
                   const isEnum = column.enumOptions.length > 0
+                  const isRole = column.name === 'role'
 
                   return (
                     <label key={column.name} className="admin-field">
@@ -503,7 +511,7 @@ export default function PanelPage() {
                         {!column.nullable && <em>*</em>}
                       </span>
 
-                      {isEnum ? (
+                      {isRole || isEnum ? (
                         <select
                           value={formData[column.name] ?? ''}
                           onChange={(event) =>
@@ -513,10 +521,17 @@ export default function PanelPage() {
                             }))
                           }
                         >
-                          <option value="">Pilih nilai</option>
-                          {column.enumOptions.map((option) => (
-                            <option key={option} value={option}>{option}</option>
-                          ))}
+                          <option value="">Pilih Role</option>
+                          {isRole ? (
+                            <>
+                              <option value="sekolah">Sekolah</option>
+                              <option value="sppg">SPPG</option>
+                            </>
+                          ) : (
+                            column.enumOptions.map((option) => (
+                              <option key={option} value={option}>{option}</option>
+                            ))
+                          )}
                         </select>
                       ) : (
                         <input

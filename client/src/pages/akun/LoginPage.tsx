@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -52,7 +53,7 @@ export default function LoginPage() {
     setSuccessMessage('')
 
     try {
-      const response = await apiRequest<LoginResponse>('/auth/login', {
+      const response: LoginResponse = await apiRequest<LoginResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({
           kode: kodeAkun.trim(),
@@ -66,13 +67,21 @@ export default function LoginPage() {
         localStorage.setItem('mbg_token', token)
       }
 
-      const role = response.data?.user?.role ?? 'admin'
-      localStorage.setItem('mbg_role', role)
+      const userRole = response.data?.user?.role ?? 'admin'
+      localStorage.setItem('mbg_role', userRole)
 
       setSuccessMessage(response.message || 'Login berhasil. Mengarahkan ke panel...')
       recaptchaRef.current?.reset()
       setCaptchaToken(null)
-      navigate(role === 'sppg' ? '/panel/sppg' : role === 'sekolah' ? '/panel/sekolah' : '/panel')
+      navigate(
+        userRole === 'admin'
+          ? '/admin'
+          : userRole === 'sekolah'
+          ? '/panelsekolah'
+          : userRole === 'sppg'
+          ? '/panelsppg'
+          : '/dashboard'
+      )
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Login gagal.')
       recaptchaRef.current?.reset()
@@ -115,6 +124,8 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </label>
+
+          
 
           {recaptchaSiteKey ? (
             <div className="login-captcha-wrap">
