@@ -43,11 +43,13 @@ cd mbg_bandung
 ```powershell
 cd server
 composer install
-Copy-Item .env.example .env -Force
+cp .env.example .env
 php artisan key:generate
 ```
 
-Edit file `.env` lalu sesuaikan koneksi database:
+Default `.env.example` sudah siap dipakai. Jadi setelah `cp`, bisa langsung lanjut.
+
+Kalau ingin pakai konfigurasi database sendiri, ubah `.env` seperti ini:
 
 ```env
 DB_CONNECTION=mysql
