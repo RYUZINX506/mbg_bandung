@@ -68,6 +68,8 @@ class SchoolController extends Controller
                 's.alamat',
                 's.total_siswa',
                 's.tanggal_bergabung',
+                's.latitude',
+                's.longitude',
                 'k.nama_kecamatan',
                 'sp.nama as status_program',
             ])
@@ -98,11 +100,22 @@ class SchoolController extends Controller
         }
 
         $distribusi = DB::table('laporan_sppg as ls')
+            ->leftJoin('menu as selected_menu', 'selected_menu.id', '=', 'ls.menu_id')
             ->leftJoin('menu as m', 'm.distribusi_id', '=', 'ls.id')
             ->select([
                 'ls.id',
                 'ls.tanggal',
+                'ls.menu_id',
                 'ls.porsi_distribusi',
+                'selected_menu.deskripsi as selected_menu_deskripsi',
+                'selected_menu.kalori as selected_menu_kalori',
+                'selected_menu.protein as selected_menu_protein',
+                'selected_menu.karbohidrat as selected_menu_karbohidrat',
+                'selected_menu.lemak as selected_menu_lemak',
+                'm.kalori as legacy_menu_kalori',
+                'm.protein as legacy_menu_protein',
+                'm.karbohidrat as legacy_menu_karbohidrat',
+                'm.lemak as legacy_menu_lemak',
                 'm.deskripsi as menu_deskripsi',
             ])
             ->where('ls.sekolah_id', $id)
@@ -112,7 +125,12 @@ class SchoolController extends Controller
             ->groupBy('id')
             ->map(function ($rows, $distribusiId) {
                 $first = $rows->first();
-                $menu = $rows->pluck('menu_deskripsi')->filter()->unique()->values()->implode(', ');
+                $legacyMenu = $rows->pluck('menu_deskripsi')->filter()->unique()->values()->implode(', ');
+                $menu = $first->selected_menu_deskripsi ?? '';
+
+                if ($menu === '') {
+                    $menu = $legacyMenu;
+                }
 
                 return [
                     'id' => (int) $distribusiId,
@@ -124,25 +142,53 @@ class SchoolController extends Controller
             })
             ->values();
 
-        $reports = DB::table('laporan_sekolah')
-            ->where('sekolah_id', $id)
-            ->orderByDesc('tanggal')
+        $reports = DB::table('laporan_sekolah as ls')
+            ->leftJoin('laporan_lokasi as ll', 'll.laporan_sekolah_id', '=', 'ls.id')
+            ->leftJoin('file_path as fm', function ($join): void {
+                $join->on('fm.laporan_sekolah_id', '=', 'ls.id')
+                    ->where('fm.jenis', '=', 'menu');
+            })
+            ->leftJoin('file_path as fs', function ($join): void {
+                $join->on('fs.laporan_sekolah_id', '=', 'ls.id')
+                    ->where('fs.jenis', '=', 'siswa_makan');
+            })
+            ->where('ls.sekolah_id', $id)
+            ->orderByDesc('ls.tanggal')
+            ->orderByDesc('ls.created_at')
             ->get([
-                'id',
-                'tanggal',
-                'jumlah_penerima',
-                'jumlah_dikonsumsi',
-                'sisa',
-                'keterangan',
+                'ls.id',
+                'ls.tanggal',
+                'ls.created_at',
+                'ls.jumlah_penerima',
+                'ls.jumlah_dikonsumsi',
+                'ls.sisa',
+                'ls.keterangan',
+                'll.latitude',
+                'll.longitude',
+                'll.akurasi',
+                'll.alamat as lokasi_alamat',
+                'fm.file as foto_menu',
+                'fs.file as foto_siswa',
             ])
             ->map(function ($row) {
+                $createdAt = $row->created_at ? date('Y-m-d H:i:s', strtotime((string) $row->created_at)) : (string) $row->tanggal;
+
                 return [
-                    'id' => $row->id,
+                    'id' => (int) $row->id,
                     'tanggal' => (string) $row->tanggal,
+                    'createdAt' => $createdAt,
                     'jumlahPenerima' => (int) ($row->jumlah_penerima ?? 0),
                     'jumlahDikonsumsi' => (int) ($row->jumlah_dikonsumsi ?? 0),
                     'sisa' => (int) ($row->sisa ?? 0),
                     'keterangan' => $row->keterangan,
+                    'lokasi' => [
+                        'latitude' => $row->latitude !== null ? (float) $row->latitude : null,
+                        'longitude' => $row->longitude !== null ? (float) $row->longitude : null,
+                        'akurasi' => $row->akurasi !== null ? (float) $row->akurasi : null,
+                        'alamat' => $row->lokasi_alamat ?? $school->alamat ?? '-',
+                    ],
+                    'fotoMenuUrl' => $row->foto_menu ? '/storage/' . $row->foto_menu : null,
+                    'fotoSiswaUrl' => $row->foto_siswa ? '/storage/' . $row->foto_siswa : null,
                 ];
             })
             ->values();
@@ -160,7 +206,7 @@ class SchoolController extends Controller
                 'jumlahSiswa' => (int) ($school->total_siswa ?? 0),
                 'sppg' => [
                     'id' => $primarySppg->id ?? null,
-                    'nama' => $primarySppg->nama_sppg ?? '-',
+                    'name' => $primarySppg->nama_sppg ?? '-',
                     'jenis' => $primarySppg->jenis_dapur ?? '-',
                     'kapasitas' => (int) ($primarySppg->kapasitas_harian ?? 0),
                 ],

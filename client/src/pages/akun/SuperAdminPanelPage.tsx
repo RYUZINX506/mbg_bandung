@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
-import { apiRequest } from '../../config/api'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { apiRequest, type RoleOption } from '../../config/api'
 import { PRIVATE_LOGIN_PATH } from '../../config/privateRoutes'
+import { getTableGroup, superadminTableGroups } from './adminMindmap'
 import '../../styles/AdminPanelPage.css'
 
 type AdminStatsResponse = {
@@ -59,11 +59,6 @@ type AdminMutationResponse = {
   message: string
 }
 
-const prettyLabel = (value: string) =>
-  value
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-
 const formatValue = (value: unknown) => {
   if (value === null || value === undefined) {
     return '-'
@@ -80,8 +75,16 @@ const formatValue = (value: unknown) => {
   return String(value)
 }
 
-export default function AdminPanel() {
+const prettyLabel = (value: string) =>
+  value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+
+export default function SuperAdminPanelPage() {
+  const navigate = useNavigate()
   const token = localStorage.getItem('mbg_token')
+  const role = localStorage.getItem('mbg_role')
+  const formSectionRef = useRef<HTMLElement | null>(null)
   const [stats, setStats] = useState<AdminStatsResponse['data'] | null>(null)
   const [tables, setTables] = useState<AdminTableSchema[]>([])
   const [selectedTable, setSelectedTable] = useState('')
@@ -93,15 +96,36 @@ export default function AdminPanel() {
   const [totalRows, setTotalRows] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [roleOptions, setRoleOptions] = useState<RoleOption[]>([])
   const [editingId, setEditingId] = useState<number | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [formData, setFormData] = useState<Record<string, string>>({})
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    if (role && role !== 'superadmin') {
+      navigate('/admin-dashboard', { replace: true })
+    }
+  }, [navigate, role])
+
   const selectedTableMeta = useMemo(
     () => tables.find((table) => table.name === selectedTable) ?? null,
     [tables, selectedTable],
+  )
+
+  const selectedGroup = useMemo(
+    () => (selectedTable ? getTableGroup(selectedTable) : null),
+    [selectedTable],
+  )
+
+  const groupedTables = useMemo(
+    () =>
+      superadminTableGroups.map((group) => ({
+        ...group,
+        tables: tables.filter((table) => group.tables.includes(table.name)).sort((left, right) => left.label.localeCompare(right.label)),
+      })),
+    [tables],
   )
 
   const editableColumns = useMemo(
@@ -184,7 +208,7 @@ export default function AdminPanel() {
       setError('')
 
       try {
-        const [statsResponse, schemaResponse] = await Promise.all([
+        const [statsResponse, schemaResponse, rolesResponse] = await Promise.all([
           apiRequest<AdminStatsResponse>('/admin/stats', {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -195,23 +219,41 @@ export default function AdminPanel() {
               Authorization: `Bearer ${token}`,
             },
           }),
+          apiRequest<AdminRowsResponse>('/admin/rows/roles?perPage=100', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
         ])
 
         setStats(statsResponse.data)
         setTables(schemaResponse.data)
+        setRoleOptions(
+          [...rolesResponse.data]
+            .map((roleItem) => ({
+              id: Number(roleItem.id ?? 0),
+              code: String(roleItem.code ?? ''),
+              label: String(roleItem.label ?? roleItem.code ?? ''),
+              description: roleItem.description === null || roleItem.description === undefined ? null : String(roleItem.description),
+              sort_order: Number(roleItem.sort_order ?? 0),
+            }))
+            .filter((roleItem) => roleItem.code)
+            .sort((left, right) => left.sort_order - right.sort_order),
+        )
 
         const preferredTable = schemaResponse.data.find((table) => table.name === 'users')?.name
-        const firstTable = preferredTable ?? schemaResponse.data[0]?.name ?? ''
+        const firstGroup = superadminTableGroups.find((group) => schemaResponse.data.some((table) => group.tables.includes(table.name)))
+        const firstTable = preferredTable ?? firstGroup?.tables.find((tableName) => schemaResponse.data.some((table) => table.name === tableName)) ?? schemaResponse.data[0]?.name ?? ''
         setSelectedTable(firstTable)
       } catch (requestError) {
-        setError(requestError instanceof Error ? requestError.message : 'Panel admin gagal dimuat.')
+        setError(requestError instanceof Error ? requestError.message : 'Panel superadmin gagal dimuat.')
       } finally {
         setIsLoading(false)
       }
     }
 
     void bootstrap()
-  }, [token])
+  }, [token, navigate])
 
   useEffect(() => {
     if (!selectedTable) {
@@ -233,11 +275,20 @@ export default function AdminPanel() {
     void loadRows(selectedTable, 1, searchInput)
   }
 
+  const handleClearSearch = () => {
+    setSearchInput('')
+    setActiveSearch('')
+    void loadRows(selectedTable, 1, '')
+  }
+
   const handleOpenCreate = () => {
     resetForm()
     setIsFormOpen(true)
     setMessage('')
     setError('')
+    requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
   }
 
   const handleEdit = (row: Record<string, unknown>) => {
@@ -255,6 +306,9 @@ export default function AdminPanel() {
     setIsFormOpen(true)
     setMessage('')
     setError('')
+    requestAnimationFrame(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
   }
 
   const handleDelete = async (id: number) => {
@@ -321,32 +375,66 @@ export default function AdminPanel() {
     }
   }
 
+  const currentGroupTitle = selectedGroup?.title ?? 'Pilih Modul'
+  const currentGroupDescription = selectedGroup?.description ?? 'Pilih tabel untuk mulai mengelola data.'
+
+  if (isLoading && !stats) {
+    return (
+      <main className="admin-page admin-page-superadmin">
+        <div className="admin-layout admin-layout-superadmin">
+          <aside className="admin-sidebar admin-sidebar-superadmin">
+            <div>
+              <div className="admin-brand">Superadmin MBG</div>
+              <div className="admin-version">Database Modules</div>
+            </div>
+          </aside>
+          <section className="admin-main admin-main-superadmin">
+            <section className="admin-panel admin-panel-mindmap">
+              <div className="admin-empty-state">Memuat panel superadmin...</div>
+            </section>
+          </section>
+        </div>
+      </main>
+    )
+  }
+
   return (
-    <main className="admin-page">
-      <div className="admin-layout">
-        <aside className="admin-sidebar">
+    <main className="admin-page admin-page-superadmin">
+      <div className="admin-layout admin-layout-superadmin">
+        <aside className="admin-sidebar admin-sidebar-superadmin">
           <div>
-            <div className="admin-brand">MBG Admin</div>
+            <div className="admin-brand">Superadmin MBG</div>
             <div className="admin-version">Database Modules</div>
 
-            <nav className="admin-nav" aria-label="Modul dari database">
-              <a
-                href="/dashboard"
-                className="admin-nav-item"
-                style={{ display: 'flex', alignItems: 'center', fontWeight: 600 }}
+            <nav className="admin-nav admin-nav-superadmin" aria-label="Modul superadmin dari database">
+              <button
+                type="button"
+                className={`admin-nav-item ${selectedTable === 'users' ? 'active' : ''}`}
+                onClick={() => setSelectedTable('users')}
+                style={{ display: 'flex', alignItems: 'center', fontWeight: 700 }}
               >
-                Dashboard
-              </a>
-              {tables.map((table) => (
-                <button
-                  key={table.name}
-                  className={`admin-nav-item ${selectedTable === table.name ? 'active' : ''}`}
-                  type="button"
-                  onClick={() => setSelectedTable(table.name)}
-                >
-                  <span>{table.label}</span>
-                  <small>{table.rowCount}</small>
-                </button>
+                <span>Panel Utama</span>
+                <small>CRUD</small>
+              </button>
+
+              {groupedTables.map((group) => (
+                <div key={group.key} className="admin-group">
+                  <div className="admin-group-title">{group.title}</div>
+                  <div className="admin-group-description">{group.description}</div>
+                  <div className="admin-group-list">
+                    {group.tables.map((table) => (
+                      <button
+                        key={table.name}
+                        type="button"
+                        className={`admin-nav-item ${selectedTable === table.name ? 'active' : ''}`}
+                        onClick={() => setSelectedTable(table.name)}
+                      >
+                        <span>{table.label}</span>
+                        <small>{table.rowCount}</small>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </nav>
           </div>
@@ -357,6 +445,7 @@ export default function AdminPanel() {
               className="admin-text-btn"
               onClick={() => {
                 localStorage.removeItem('mbg_token')
+                localStorage.removeItem('mbg_role')
                 window.location.href = PRIVATE_LOGIN_PATH
               }}
             >
@@ -365,59 +454,59 @@ export default function AdminPanel() {
           </div>
         </aside>
 
-        <section className="admin-main">
-          <header className="admin-topbar">
+        <section className="admin-main admin-main-superadmin">
+          <header className="admin-topbar admin-topbar-superadmin">
             <div>
-              <h1>Panel Admin Database</h1>
-              <p>
-                {stats ? `Login sebagai ${stats.user.name} (${stats.user.role})` : 'Memuat sesi admin...'}
+              <p className="admin-kicker">Panel Admin MBG</p>
+              <h1>Superadmin</h1>
+              <p className="admin-topbar-subtitle">
+                Kelola master data, akun, dan seluruh tabel sesuai mindmap superadmin.
               </p>
             </div>
-            {!token && (
-              <p className="admin-warning">
-                Sesi tidak ditemukan. <Link to={PRIVATE_LOGIN_PATH}>Masuk di sini</Link>
-              </p>
-            )}
+            <div className="admin-topbar-tags">
+              <span>CRUD</span>
+              <span>Soft Delete</span>
+              <span>Master Data</span>
+            </div>
           </header>
 
-          <section className="admin-stats-grid" aria-label="Ringkasan database">
-            <article className="admin-stat-card">
-              <span>Jumlah Tabel</span>
-              <p>{stats?.totals.tables ?? 0}</p>
-            </article>
-            <article className="admin-stat-card">
-              <span>Total Record</span>
-              <p>{stats?.totals.records ?? 0}</p>
-            </article>
-            <article className="admin-stat-card">
-              <span>Pengguna</span>
-              <p>{stats?.totals.users ?? 0}</p>
-            </article>
-            <article className="admin-stat-card">
-              <span>Pengaduan</span>
-              <p>{stats?.totals.complaints ?? 0}</p>
-            </article>
+          <section className="admin-stats-grid admin-stats-grid-superadmin" aria-label="Ringkasan superadmin">
+            <article className="admin-stat-card admin-stat-card-mindmap"><span>Jumlah Tabel</span><p>{stats?.totals.tables ?? 0}</p></article>
+            <article className="admin-stat-card admin-stat-card-mindmap"><span>Total Record</span><p>{stats?.totals.records ?? 0}</p></article>
+            <article className="admin-stat-card admin-stat-card-mindmap"><span>Pengguna</span><p>{stats?.totals.users ?? 0}</p></article>
+            <article className="admin-stat-card admin-stat-card-mindmap"><span>Pengaduan</span><p>{stats?.totals.complaints ?? 0}</p></article>
           </section>
 
-          <section className="admin-panel">
+          <section className="admin-panel admin-panel-mindmap">
             <div className="admin-panel-head">
               <div>
+                <p className="admin-panel-eyebrow">{currentGroupTitle}</p>
                 <h2>{selectedTableMeta?.label ?? 'Pilih modul tabel'}</h2>
-                <p>{totalRows} data ditemukan</p>
+                <p>{currentGroupDescription}</p>
               </div>
-              <div className="admin-actions">
+              <form
+                className="admin-actions"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  handleSearch()
+                }}
+              >
                 <label className="admin-search" htmlFor="tableSearch">
                   <input
                     id="tableSearch"
                     type="search"
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
-                    placeholder="Cari data..."
+                    placeholder="Cari data di tabel ini..."
+                    aria-label="Cari data pada tabel"
                   />
                 </label>
-                <button type="button" className="admin-btn secondary" onClick={handleSearch}>Cari</button>
+                <button type="submit" className="admin-btn secondary">Cari</button>
+                <button type="button" className="admin-btn secondary" onClick={handleClearSearch} disabled={!searchInput && !activeSearch}>
+                  Reset
+                </button>
                 <button type="button" className="admin-btn primary" onClick={handleOpenCreate}>+ Tambah</button>
-              </div>
+              </form>
             </div>
 
             {error && <p className="admin-alert error">{error}</p>}
@@ -493,9 +582,12 @@ export default function AdminPanel() {
           </section>
 
           {isFormOpen && (
-            <section className="admin-panel">
+            <section className="admin-panel admin-panel-mindmap" ref={formSectionRef}>
               <div className="admin-panel-head">
-                <h2>{editingId ? 'Edit Data' : 'Tambah Data Baru'}</h2>
+                <div>
+                  <p className="admin-panel-eyebrow">{editingId ? 'Mode edit aktif' : 'Mode tambah aktif'}</p>
+                  <h2>{editingId ? 'Edit Data' : 'Tambah Data Baru'}</h2>
+                </div>
                 <button type="button" className="admin-btn secondary" onClick={() => setIsFormOpen(false)}>Tutup</button>
               </div>
 
@@ -523,10 +615,11 @@ export default function AdminPanel() {
                         >
                           <option value="">Pilih Role</option>
                           {isRole ? (
-                            <>
-                              <option value="sekolah">Sekolah</option>
-                              <option value="sppg">SPPG</option>
-                            </>
+                            roleOptions.map((option) => (
+                              <option key={option.code} value={option.code} title={option.description ?? undefined}>
+                                {option.label}
+                              </option>
+                            ))
                           ) : (
                             column.enumOptions.map((option) => (
                               <option key={option} value={option}>{option}</option>
@@ -554,6 +647,21 @@ export default function AdminPanel() {
                   {isSaving ? 'Menyimpan...' : editingId ? 'Update Data' : 'Simpan Data'}
                 </button>
               </form>
+            </section>
+          )}
+
+          {!isLoading && selectedTableMeta && (
+            <section className="admin-panel admin-panel-note">
+              <div className="admin-panel-head">
+                <div>
+                  <p className="admin-panel-eyebrow">Informasi Modul</p>
+                  <h2>{selectedTableMeta.label}</h2>
+                </div>
+              </div>
+              <p className="admin-module-copy">
+                {selectedGroup?.description ?? 'Gunakan panel ini untuk mengelola data yang dipilih.'}
+              </p>
+              <p className="admin-module-copy muted">Total data ditemukan: {totalRows}</p>
             </section>
           )}
         </section>

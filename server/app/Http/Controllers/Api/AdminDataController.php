@@ -15,6 +15,7 @@ class AdminDataController extends Controller
 {
     private const MANAGED_TABLES = [
         'users',
+        'roles',
         'kecamatan',
         'status_program',
         'satuan',
@@ -86,8 +87,14 @@ class AdminDataController extends Controller
 
     public function rows(Request $request, string $table): JsonResponse
     {
-        if (! $this->resolveAdmin($request)) {
+        $user = $this->resolveAdmin($request);
+
+        if (! $user) {
             return response()->json(['message' => 'Akses admin dibutuhkan.'], 403);
+        }
+
+        if ($this->isSensitiveTable($table) && ! $this->isSuperAdmin($user)) {
+            return response()->json(['message' => 'Akses superadmin dibutuhkan.'], 403);
         }
 
         if (! $this->isAllowedTable($table)) {
@@ -134,8 +141,14 @@ class AdminDataController extends Controller
 
     public function store(Request $request, string $table): JsonResponse
     {
-        if (! $this->resolveAdmin($request)) {
+        $user = $this->resolveAdmin($request);
+
+        if (! $user) {
             return response()->json(['message' => 'Akses admin dibutuhkan.'], 403);
+        }
+
+        if ($this->isSensitiveTable($table) && ! $this->isSuperAdmin($user)) {
+            return response()->json(['message' => 'Akses superadmin dibutuhkan.'], 403);
         }
 
         if (! $this->isAllowedTable($table)) {
@@ -164,8 +177,14 @@ class AdminDataController extends Controller
 
     public function update(Request $request, string $table, int $id): JsonResponse
     {
-        if (! $this->resolveAdmin($request)) {
+        $user = $this->resolveAdmin($request);
+
+        if (! $user) {
             return response()->json(['message' => 'Akses admin dibutuhkan.'], 403);
+        }
+
+        if ($this->isSensitiveTable($table) && ! $this->isSuperAdmin($user)) {
+            return response()->json(['message' => 'Akses superadmin dibutuhkan.'], 403);
         }
 
         if (! $this->isAllowedTable($table)) {
@@ -200,8 +219,14 @@ class AdminDataController extends Controller
 
     public function destroy(Request $request, string $table, int $id): JsonResponse
     {
-        if (! $this->resolveAdmin($request)) {
+        $user = $this->resolveAdmin($request);
+
+        if (! $user) {
             return response()->json(['message' => 'Akses admin dibutuhkan.'], 403);
+        }
+
+        if ($this->isSensitiveTable($table) && ! $this->isSuperAdmin($user)) {
+            return response()->json(['message' => 'Akses superadmin dibutuhkan.'], 403);
         }
 
         if (! $this->isAllowedTable($table)) {
@@ -235,11 +260,21 @@ class AdminDataController extends Controller
                 'role',
             ]);
 
-        if (! $user || $user->role !== 'admin') {
+        if (! $user || ! in_array($user->role, ['admin', 'superadmin'], true)) {
             return null;
         }
 
         return $user;
+    }
+
+    private function isSuperAdmin(object $user): bool
+    {
+        return ($user->role ?? null) === 'superadmin';
+    }
+
+    private function isSensitiveTable(string $table): bool
+    {
+        return in_array($table, ['users', 'user_profiles'], true);
     }
 
     private function isAllowedTable(string $table): bool

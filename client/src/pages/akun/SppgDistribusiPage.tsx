@@ -1,6 +1,23 @@
-import React from 'react';
+type ReportForm = {
+  tanggal?: string
+  [key: string]: unknown
+}
 
-export default function SppgDistribusiPage({ reportForm, setReportForm, savingReport, handleReportSubmit, distribusiPhoto, setDistribusiPhoto, panel }) {
+type DistribusiPhoto = {
+  menu: File | null
+}
+
+type SppgDistribusiPageProps = {
+  reportForm: ReportForm
+  setReportForm: React.Dispatch<React.SetStateAction<ReportForm>>
+  savingReport: boolean
+  handleReportSubmit: (event: React.FormEvent<HTMLFormElement>) => void
+  distribusiPhoto: DistribusiPhoto
+  setDistribusiPhoto: React.Dispatch<React.SetStateAction<DistribusiPhoto>>
+  panel: unknown
+}
+
+export default function SppgDistribusiPage({ reportForm, setReportForm, savingReport, handleReportSubmit, distribusiPhoto, setDistribusiPhoto }: SppgDistribusiPageProps) {
   return (
     <form className="role-panel-form" onSubmit={handleReportSubmit}>
       {/* ...input fields sama seperti sebelumnya... */}

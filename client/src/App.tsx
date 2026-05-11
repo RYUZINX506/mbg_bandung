@@ -9,12 +9,12 @@ import SPPGDetailPage from './pages/sppg/SPPGDetailPage'
 import ContactPage from './pages/ContactPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 
-import AdminPanel from './pages/akun/AdminPanel'
+import AdminDashboardPage from './pages/akun/AdminDashboardPage'
+import SuperAdminPanelPage from './pages/akun/SuperAdminPanelPage'
 import RolePanelPage from './pages/akun/RolePanelPage'
 import PanelRedirect from './pages/akun/PanelRedirect'
 import SekolahPanelPage from './pages/akun/SekolahPanelPage'
 import SppgPanelPage from './pages/akun/SppgPanelPage'
-import DashboardPage from './pages/akun/DashboardPage'
 import LoginPage from './pages/akun/LoginPage'
 import { PRIVATE_LOGIN_PATH } from './config/privateRoutes'
 import './App.css'
@@ -32,10 +32,10 @@ function App() {
         <Route path="/sppg/:id" element={<SPPGDetailPage />} />
         <Route path="/kontak" element={<ContactPage />} />
         <Route path="/privasi" element={<PrivacyPolicyPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
         <Route path="/panel" element={<PanelRedirect />} />
         <Route path="/panel/:role" element={<RolePanelPage />} />
-        <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/admin" element={<SuperAdminPanelPage />} />
         <Route path="/panelsekolah" element={<SekolahPanelPage />} />
         <Route path="/panelsppg" element={<SppgPanelPage />} />
         <Route path="/login" element={<LoginPage />} />

@@ -572,6 +572,588 @@
   color: #64748b;
 }
 
+.sppg-date-filter-bar {
+  margin-top: 0.85rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sppg-date-filter {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 240px;
+  max-width: 280px;
+}
+
+.sppg-date-filter span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.sppg-date-filter input {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+  box-shadow: 0 10px 18px -18px rgba(15, 23, 42, 0.45);
+}
+
+.sppg-date-filter input:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.sppg-distribution-list,
+.sppg-report-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.sppg-distribution-card,
+.sppg-report-card {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  padding: 0;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 14px 24px -22px rgba(15, 23, 42, 0.45);
+  overflow: hidden;
+}
+
+.sppg-distribution-summary {
+  all: unset;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 1rem 1.2rem;
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.sppg-distribution-summary:hover {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.sppg-report-summary {
+  all: unset;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 1rem 1.2rem;
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.sppg-report-summary:hover {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.sppg-report-summary-left,
+.sppg-distribution-summary-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.sppg-report-meta-summary,
+.sppg-distribution-meta-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.sppg-report-summary-right,
+.sppg-distribution-summary-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sppg-report-chevron,
+.sppg-distribution-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  transition: transform 0.2s ease;
+}
+
+.sppg-report-chevron.open,
+.sppg-distribution-chevron.open {
+  transform: rotate(180deg);
+}
+
+.sppg-report-card.expanded,
+.sppg-distribution-card.expanded {
+  background: #eef5ff;
+}
+
+.sppg-distribution-meta-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.sppg-distribution-summary-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sppg-distribution-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  transition: transform 0.2s ease;
+}
+
+.sppg-distribution-chevron.open {
+  transform: rotate(180deg);
+}
+
+.sppg-distribution-card.expanded {
+  background: #eef5ff;
+}
+
+.sppg-distribution-detail {
+  margin-top: 0.85rem;
+  padding: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 0 0 16px 16px;
+  background: rgba(229, 240, 255, 0.65);
+}
+
+.sppg-distribution-menu-card {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  padding: 0.9rem;
+  background: #ffffff;
+}
+
+.distribution-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.distribution-card-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 1.1rem;
+}
+
+.distribution-card-title {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.distribution-card-subtitle {
+  color: #64748b;
+  font-size: 0.86rem;
+}
+
+.distribution-menu-text {
+  color: #334155;
+  font-size: 0.95rem;
+  line-height: 1.75;
+  margin: 0;
+}
+
+.sppg-distribution-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.distribution-stat-box {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.distribution-stat-box span {
+  display: block;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.distribution-stat-box strong {
+  display: block;
+  margin-top: 0.55rem;
+  color: #0f172a;
+  font-size: 1.3rem;
+}
+
+.sppg-distribution-note {
+  margin-top: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  background: #fffbeb;
+  border: 1px solid #f7e4b4;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.sppg-distribution-card h3,
+.sppg-report-card h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.sppg-distribution-card p,
+.sppg-report-card p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.sppg-distribution-pill {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sppg-distribution-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  margin-top: 0.75rem;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.sppg-empty-block {
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  padding: 1rem;
+  color: #475569;
+  background: #fbfdff;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.sppg-distribution-summary-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.sppg-distribution-icon,
+.sppg-distribution-school-icon {
+  flex: 0 0 auto;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #1d4ed8;
+  background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid rgba(147, 197, 253, 0.8);
+  box-shadow: 0 10px 18px -16px rgba(37, 99, 235, 0.55);
+}
+
+.sppg-distribution-summary-heading h3,
+.distribution-menu-content h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.sppg-distribution-summary-heading p,
+.sppg-distribution-school-title p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.distribution-menu-layout {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+.distribution-menu-preview {
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(145deg, #fffaf2 0%, #f1f5f9 100%);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+}
+
+.distribution-menu-preview img {
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.distribution-menu-placeholder {
+  padding: 0.9rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.86rem;
+}
+
+.distribution-menu-content {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.distribution-nutrition-panel {
+  border-radius: 16px;
+  background: linear-gradient(145deg, #eef4ff 0%, #dde8ff 100%);
+  border: 1px solid rgba(191, 219, 254, 0.9);
+  padding: 0.85rem;
+}
+
+.distribution-nutrition-panel-head {
+  margin-bottom: 0.7rem;
+}
+
+.distribution-nutrition-panel-head strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.distribution-nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.distribution-nutrition-box {
+  background: #ffffff;
+  border: 1px solid rgba(191, 219, 254, 0.8);
+  border-radius: 12px;
+  padding: 0.7rem 0.55rem;
+  text-align: center;
+  box-shadow: 0 10px 16px -18px rgba(15, 23, 42, 0.45);
+}
+
+.distribution-nutrition-box span {
+  display: block;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 0.3rem;
+}
+
+.distribution-nutrition-box strong {
+  font-size: 1.08rem;
+  line-height: 1.05;
+  font-weight: 800;
+}
+
+.distribution-nutrition-box.tone-calorie strong {
+  color: #f97316;
+}
+
+.distribution-nutrition-box.tone-protein strong {
+  color: #16a34a;
+}
+
+.distribution-nutrition-box.tone-carb strong {
+  color: #2563eb;
+}
+
+.distribution-nutrition-box.tone-fat strong {
+  color: #ea580c;
+}
+
+.sppg-distribution-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.distribution-stat-box {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.distribution-stat-box span {
+  display: block;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.distribution-stat-box strong {
+  display: block;
+  margin-top: 0.55rem;
+  color: #0f172a;
+  font-size: 1.3rem;
+}
+
+.sppg-distribution-note {
+  margin-top: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  background: #fffbeb;
+  border: 1px solid #f7e4b4;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.sppg-distribution-note strong {
+  color: #854d0e;
+}
+
+.sppg-report-time {
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sppg-report-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-top: 0.85rem;
+}
+
+.sppg-report-box {
+  border: 1px solid rgba(203, 213, 225, 0.55);
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 0.8rem 0.9rem;
+  display: grid;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.sppg-report-box span {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sppg-report-box strong {
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.sppg-report-note {
+  margin-top: 0.85rem;
+  border-radius: 14px;
+  background: #fffbe8;
+  border: 1px solid #f5e7b8;
+  padding: 0.85rem 0.95rem;
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.sppg-report-note strong {
+  color: #854d0e;
+}
+
+.sppg-report-photos {
+  margin-top: 0.85rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.sppg-report-photo {
+  border-radius: 14px;
+  border: 1px solid rgba(191, 219, 254, 0.7);
+  background: #f8fbff;
+  overflow: hidden;
+}
+
+.sppg-report-photo span {
+  display: block;
+  padding: 0.65rem 0.8rem;
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 800;
+  border-bottom: 1px solid rgba(191, 219, 254, 0.7);
+}
+
+.sppg-report-photo img {
+  display: block;
+  width: 100%;
+  height: 210px;
+  object-fit: cover;
+}
+
+.sppg-photo-empty {
+  min-height: 210px;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.sppg-report-location {
+  margin-top: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.85rem;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   .sppg-detail-page {
     padding: 2rem 1rem 3rem;
@@ -597,6 +1179,10 @@
     padding: 1.5rem 1.25rem 2rem;
   }
 
+  .sppg-date-filter-bar {
+    justify-content: flex-start;
+  }
+
   .sppg-stats-grid {
     grid-template-columns: 1fr;
   }
@@ -606,13 +1192,32 @@
     grid-template-columns: 1fr;
   }
 
-  .sppg-stat-card .stat-value,
-  .contact-value {
-    font-size: 1.1rem;
+  .distribution-menu-layout,
+  .distribution-nutrition-grid,
+  .sppg-distribution-stats-grid,
+  .sppg-report-grid,
+  .sppg-report-photos {
+    grid-template-columns: 1fr;
+  }
+
+  .distribution-menu-preview {
+    min-height: 160px;
+  }
+
+  .distribution-menu-preview img {
+    min-height: 160px;
+  }
+
+  .distribution-nutrition-box strong {
+    font-size: 1rem;
+  }
+
+  .distribution-stat-box strong {
+    font-size: 1rem;
   }
 
   .sppg-section h2 {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
   }
 
   .school-row {

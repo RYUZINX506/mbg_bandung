@@ -74,13 +74,15 @@ export default function LoginPage() {
       recaptchaRef.current?.reset()
       setCaptchaToken(null)
       navigate(
-        userRole === 'admin'
+        userRole === 'superadmin'
           ? '/admin'
+          : userRole === 'admin'
+          ? '/admin-dashboard'
           : userRole === 'sekolah'
           ? '/panelsekolah'
           : userRole === 'sppg'
           ? '/panelsppg'
-          : '/dashboard'
+          : '/admin-dashboard'
       )
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Login gagal.')
@@ -95,9 +97,8 @@ export default function LoginPage() {
     <main className="login-page">
       <section className="login-card">
         <header className="login-header">
-          <h1>Masuk Admin</h1>
+          <h1>Login</h1>
           <p>Silakan login untuk membuka dashboard panel.</p>
-          <small>{PRIVATE_LOGIN_PATH}</small>
         </header>
 
         <form className="login-form" onSubmit={handleSubmit}>

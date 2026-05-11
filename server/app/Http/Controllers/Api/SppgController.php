@@ -113,6 +113,148 @@ class SppgController extends Controller
             })
             ->values();
 
+        $distribusi = DB::table('laporan_sppg as ls')
+            ->join('sekolah as sc', 'sc.id', '=', 'ls.sekolah_id')
+            ->leftJoin('menu as selected_menu', 'selected_menu.id', '=', 'ls.menu_id')
+            ->leftJoin('menu as m', 'm.distribusi_id', '=', 'ls.id')
+            ->where('ls.sppg_id', $id)
+            ->orderByDesc('ls.tanggal')
+            ->orderByDesc('ls.id')
+            ->get([
+                'ls.id',
+                'ls.tanggal',
+                'ls.created_at',
+                'ls.menu_id',
+                'ls.porsi_distribusi',
+                'ls.kalori',
+                'ls.protein',
+                'ls.karbo',
+                'ls.lemak',
+                'ls.status_delivery',
+                'ls.status_terkirim',
+                'ls.foto_menu',
+                'selected_menu.deskripsi as selected_menu_deskripsi',
+                'selected_menu.kalori as selected_menu_kalori',
+                'selected_menu.protein as selected_menu_protein',
+                'selected_menu.karbohidrat as selected_menu_karbohidrat',
+                'selected_menu.lemak as selected_menu_lemak',
+                'm.kalori as legacy_menu_kalori',
+                'm.protein as legacy_menu_protein',
+                'm.karbohidrat as legacy_menu_karbohidrat',
+                'm.lemak as legacy_menu_lemak',
+                'sc.nama_sekolah',
+                'sc.jenis_sekolah',
+                'm.deskripsi as menu_deskripsi',
+            ])
+            ->groupBy('id')
+            ->map(function ($rows) {
+                $first = $rows->first();
+                $legacyMenu = $rows->pluck('menu_deskripsi')->filter()->unique()->values()->implode(', ');
+                $menu = $first->selected_menu_deskripsi ?? '';
+
+                if ($menu === '') {
+                    $menu = $legacyMenu;
+                }
+
+                $kalori = $first->kalori ?? $first->selected_menu_kalori;
+                $protein = $first->protein ?? $first->selected_menu_protein;
+                $karbo = $first->karbo ?? $first->selected_menu_karbohidrat;
+                $lemak = $first->lemak ?? $first->selected_menu_lemak;
+
+                if ($kalori === null) {
+                    $kalori = $first->legacy_menu_kalori;
+                }
+
+                if ($protein === null) {
+                    $protein = $first->legacy_menu_protein;
+                }
+
+                if ($karbo === null) {
+                    $karbo = $first->legacy_menu_karbohidrat;
+                }
+
+                if ($lemak === null) {
+                    $lemak = $first->legacy_menu_lemak;
+                }
+
+                return [
+                    'id' => (int) $first->id,
+                    'tanggal' => (string) $first->tanggal,
+                    'createdAt' => $first->created_at ? date('Y-m-d H:i:s', strtotime((string) $first->created_at)) : null,
+                    'sekolah' => $first->nama_sekolah ?? '-',
+                    'level' => $first->jenis_sekolah ?? '-',
+                    'menu' => $menu !== '' ? $menu : 'Menu belum diinput',
+                    'porsi' => (int) ($first->porsi_distribusi ?? 0),
+                    'kalori' => $kalori !== null ? (int) $kalori : null,
+                    'protein' => $protein !== null ? (int) $protein : null,
+                    'karbo' => $karbo !== null ? (int) $karbo : null,
+                    'lemak' => $lemak !== null ? (int) $lemak : null,
+                    'status' => $first->status_delivery ?? $first->status_terkirim ?? 'Aktif',
+                    'fotoMenuUrl' => $first->foto_menu ? url('/storage/' . $first->foto_menu) : null,
+                ];
+            })
+            ->values();
+
+        $servedSchoolIds = $servedSchools->pluck('id')->all();
+
+        $reports = empty($servedSchoolIds)
+            ? collect()
+            : DB::table('laporan_sekolah as ls')
+                ->join('sekolah as sc', 'sc.id', '=', 'ls.sekolah_id')
+                ->leftJoin('laporan_lokasi as ll', 'll.laporan_sekolah_id', '=', 'ls.id')
+                ->leftJoin('file_path as fm', function ($join): void {
+                    $join->on('fm.laporan_sekolah_id', '=', 'ls.id')
+                        ->where('fm.jenis', '=', 'menu');
+                })
+                ->leftJoin('file_path as fs', function ($join): void {
+                    $join->on('fs.laporan_sekolah_id', '=', 'ls.id')
+                        ->where('fs.jenis', '=', 'siswa_makan');
+                })
+                ->whereIn('ls.sekolah_id', $servedSchoolIds)
+                ->orderByDesc('ls.tanggal')
+                ->orderByDesc('ls.created_at')
+                ->get([
+                    'ls.id',
+                    'ls.tanggal',
+                    'ls.created_at',
+                    'ls.jumlah_penerima',
+                    'ls.jumlah_dikonsumsi',
+                    'ls.sisa',
+                    'ls.keterangan',
+                    'sc.nama_sekolah',
+                    'sc.jenis_sekolah',
+                    'll.latitude',
+                    'll.longitude',
+                    'll.akurasi',
+                    'll.alamat as lokasi_alamat',
+                    'fm.file as foto_menu',
+                    'fs.file as foto_siswa',
+                ])
+                ->map(function ($row) {
+                    $createdAt = $row->created_at ? date('Y-m-d H:i:s', strtotime((string) $row->created_at)) : (string) $row->tanggal;
+
+                    return [
+                        'id' => (int) $row->id,
+                        'tanggal' => (string) $row->tanggal,
+                        'createdAt' => $createdAt,
+                        'schoolName' => $row->nama_sekolah ?? '-',
+                        'schoolType' => $row->jenis_sekolah ?? '-',
+                        'jumlahPenerima' => (int) ($row->jumlah_penerima ?? 0),
+                        'jumlahDikonsumsi' => (int) ($row->jumlah_dikonsumsi ?? 0),
+                        'sisa' => (int) ($row->sisa ?? 0),
+                        'keterangan' => $row->keterangan,
+                        'lokasi' => [
+                            'latitude' => $row->latitude !== null ? (float) $row->latitude : null,
+                            'longitude' => $row->longitude !== null ? (float) $row->longitude : null,
+                            'akurasi' => $row->akurasi !== null ? (float) $row->akurasi : null,
+                            'alamat' => $row->lokasi_alamat ?? '-',
+                        ],
+                        'fotoMenuUrl' => $row->foto_menu ? url('/storage/' . $row->foto_menu) : null,
+                        'fotoSiswaUrl' => $row->foto_siswa ? url('/storage/' . $row->foto_siswa) : null,
+                    ];
+                })
+                ->values();
+
         $facilityList = collect(explode(',', (string) ($sppg->fasilitas_dapur ?? '')))
             ->map(fn ($item) => trim($item))
             ->filter()
@@ -163,6 +305,8 @@ class SppgController extends Controller
                     'issued' => '-',
                     'validUntil' => '-',
                 ],
+                'distribusi' => $distribusi,
+                'reports' => $reports,
                 'servedSchools' => $servedSchools,
             ],
         ]);

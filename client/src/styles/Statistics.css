@@ -165,17 +165,18 @@
 }
 
 .stat-card-modern .stat-main-value {
-  font-size: 2.4rem;
+  font-size: 2rem;
   letter-spacing: 0.02em;
 }
 
 .stat-card-modern .stat-card-main .stat-main-value:first-child {
-  font-size: 2rem;
-  opacity: 0.9;
+  font-size: 2.65rem;
+  opacity: 1;
 }
 
 .stat-card-modern .stat-main-divider {
-  font-size: 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
   opacity: 0.8;
 }
 
@@ -193,6 +194,41 @@
 
 .stat-card-modern .stat-progress {
   margin: 0.25rem 0 0;
+}
+
+.stat-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+.stat-breakdown-chip {
+  display: grid;
+  gap: 0.15rem;
+  justify-items: start;
+  padding: 0.1rem 0;
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.stat-breakdown-chip strong {
+  font-weight: 800;
+  opacity: 0.9;
+}
+
+.stat-breakdown-chip em {
+  font-style: normal;
+  opacity: 0.95;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.stat-breakdown-chip.theme-ibu,
+.stat-breakdown-chip.theme-paud,
+.stat-breakdown-chip.theme-tk {
+  background: transparent;
 }
 
 .stat-card-modern .progress-bar {

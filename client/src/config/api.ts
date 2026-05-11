@@ -14,7 +14,13 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   const payload = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(payload?.message ?? 'Request gagal.')
+    console.error(`API Error: ${response.status} ${response.statusText}`, {
+      path,
+      status: response.status,
+      message: payload?.message,
+      payload,
+    })
+    throw new Error(payload?.message ?? `Request gagal (${response.status}).`)
   }
 
   return payload as T
@@ -39,6 +45,14 @@ export type SchoolItem = {
   isActive: boolean
 }
 
+export type RoleOption = {
+  id: number
+  code: string
+  label: string
+  description: string | null
+  sort_order: number
+}
+
 export type SppgItem = {
   id: number
   name: string
@@ -52,12 +66,23 @@ export type HomeResponse = {
   data: {
     summary: {
       sekolah: number
+      sekolahAktif?: number
       kelompok: number
+      totalPenerimaKelompok?: number
+      kelompokBumil?: number
+      kelompokBalita?: number
+      kelompokBusui?: number
       sppg: number
+      totalSppg?: number
+      sppgLaporHariIni?: number
+      sppgBelumLapor?: number
+      sekolahLaporHariIni?: number
+      sekolahBelumLapor?: number
       laporanSekolah: number
       pengaduan: number
       totalPenerimaHariIni: number
       totalTargetPenerima: number
+      totalDistribusiPorsiHariIni?: number
     }
     topSchools: Array<{
       id: number
@@ -71,6 +96,28 @@ export type HomeResponse = {
       name: string
       kecamatan: string
       kapasitas: number
+    }>
+    distributionsBySchool?: Array<{
+      schoolId: number
+      name: string
+      type: string
+      kecamatan: string
+      totalPorsi: number
+      sppgCount: number
+      lastUpdated?: string | null
+    }>
+    schoolReportsToday?: Array<{
+      id: number
+      schoolId: number
+      name: string
+      type: string
+      kecamatan: string
+      tanggal: string
+      updatedAt: string
+      hasMainPhoto: boolean
+      hasSecondaryPhoto: boolean
+      fotoMenuUrl?: string | null
+      fotoSiswaUrl?: string | null
     }>
   }
 }
@@ -101,10 +148,20 @@ export type SchoolDetail = {
   reports: Array<{
     id: number
     tanggal: string
+    created_at: string
+    createdAt?: string
     jumlahPenerima: number
     jumlahDikonsumsi: number
     sisa: number
     keterangan: string | null
+    lokasi: {
+      latitude: number | null
+      longitude: number | null
+      akurasi: number | null
+      alamat: string
+    }
+    fotoMenuUrl: string | null
+    fotoSiswaUrl: string | null
   }>
 }
 
@@ -135,6 +192,41 @@ export type SppgDetail = {
     issued: string
     validUntil: string
   }
+  distribusi: Array<{
+    id: number
+    tanggal: string
+    createdAt?: string | null
+    sekolah: string
+    level: string
+    menu: string
+    porsi: number
+    kalori?: number | null
+    protein?: number | null
+    karbo?: number | null
+    lemak?: number | null
+    status: string
+    fotoMenuUrl?: string | null
+  }>
+  reports: Array<{
+    id: number
+    tanggal: string
+    created_at: string
+    createdAt?: string
+    schoolName: string
+    schoolType: string
+    jumlahPenerima: number
+    jumlahDikonsumsi: number
+    sisa: number
+    keterangan: string | null
+    lokasi: {
+      latitude: number | null
+      longitude: number | null
+      akurasi: number | null
+      alamat: string
+    }
+    fotoMenuUrl: string | null
+    fotoSiswaUrl: string | null
+  }>
   servedSchools: Array<{
     id: number
     name: string
@@ -225,6 +317,17 @@ export type PanelResponse = {
       kecamatan: Array<{ id: number; nama_kecamatan: string }>
       jenisDapur: Array<{ id: number; nama: string }>
       sekolah: Array<{ id: number; nama_sekolah: string; jenis_sekolah: string | null; alamat: string | null }>
+      menus?: Array<{
+        id: number
+        code: string
+        deskripsi: string
+        kategori: string | null
+        kalori: number | null
+        protein: number | null
+        karbohidrat: number | null
+        lemak: number | null
+        jumlah: number | null
+      }>
     }
   }
 }

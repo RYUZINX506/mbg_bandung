@@ -1,13 +1,76 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Header from '../../components/Header'
 import Footer from '../../components/Footer'
 import { apiRequest, type ApiDetailResponse, type SppgDetail } from '../../config/api'
 import '../../styles/SPPGDetailPage.css'
 
+const shortDateFormatter = new Intl.DateTimeFormat('id-ID', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
+const longDateFormatter = new Intl.DateTimeFormat('id-ID', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+})
+
+const numberFormatter = new Intl.NumberFormat('id-ID')
+
+const timeFormatter = new Intl.DateTimeFormat('id-ID', {
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+function safeDate(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function formatShortDate(value: string) {
+  const date = safeDate(value)
+  return date ? shortDateFormatter.format(date) : value
+}
+
+function formatTime(value: string) {
+  const date = safeDate(value)
+  return date ? timeFormatter.format(date) : '-'
+}
+
+function formatNutrient(value?: number | null) {
+  return typeof value === 'number' && Number.isFinite(value) ? numberFormatter.format(value) : '-'
+}
+
+function formatNutrientWithUnit(value?: number | null) {
+  return typeof value === 'number' && Number.isFinite(value) ? `${numberFormatter.format(value)}g` : '-'
+}
+
+function resolveImageUrl(value: string | null | undefined) {
+  if (!value) {
+    return null
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    return value
+  }
+
+  return `http://127.0.0.1:8000${value.startsWith('/') ? value : `/${value}`}`
+}
+
+function getTodayInputValue() {
+  const now = new Date()
+  const timezoneOffset = now.getTimezoneOffset() * 60000
+  return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10)
+}
+
 export default function SPPGDetailPage() {
   const { id } = useParams()
   const [activeTab, setActiveTab] = useState('info')
+  const [selectedDate, setSelectedDate] = useState(getTodayInputValue())
+  const [expandedDistribusiId, setExpandedDistribusiId] = useState<number | null>(null)
   const [detail, setDetail] = useState<SppgDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -28,6 +91,27 @@ export default function SPPGDetailPage() {
       })
       .finally(() => setLoading(false))
   }, [id])
+
+  const filteredDistribusi = useMemo(() => {
+    if (!detail) {
+      return []
+    }
+
+    return detail.distribusi.filter((item) => item.tanggal === selectedDate)
+  }, [detail, selectedDate])
+
+  useEffect(() => {
+    if (filteredDistribusi.length === 1) {
+      setExpandedDistribusiId(filteredDistribusi[0].id)
+      return
+    }
+
+    if (filteredDistribusi.length === 0) {
+      setExpandedDistribusiId(null)
+    }
+  }, [filteredDistribusi])
+
+  const showDateFilter = activeTab === 'distribusi'
 
   return (
     <>
@@ -56,7 +140,7 @@ export default function SPPGDetailPage() {
             </div>
 
             <div className="sppg-tabs">
-              {['info', 'distribusi', 'laporan'].map(tab => (
+              {['info', 'distribusi'].map(tab => (
                 <button
                   key={tab}
                   className={`sppg-tab ${activeTab === tab ? 'active' : ''}`}
@@ -64,10 +148,24 @@ export default function SPPGDetailPage() {
                 >
                   {tab === 'info' && 'Informasi SPPG'}
                   {tab === 'distribusi' && 'Distribusi'}
-                  {tab === 'laporan' && 'Laporan Sekolah'}
                 </button>
               ))}
             </div>
+
+            {showDateFilter && (
+              <div className="sppg-date-filter-bar">
+                <label className="sppg-date-filter" htmlFor="sppgDateFilter">
+                  <span>Tanggal data</span>
+                  <input
+                    id="sppgDateFilter"
+                    type="date"
+                    value={selectedDate}
+                    onChange={(event) => setSelectedDate(event.target.value)}
+                    aria-label="Tanggal data SPPG"
+                  />
+                </label>
+              </div>
+            )}
 
             {activeTab === 'info' && (
               <div className="sppg-detail-content">
@@ -186,12 +284,115 @@ export default function SPPGDetailPage() {
               </div>
             )}
 
-            {activeTab !== 'info' && (
-              <div className="sppg-placeholder">
-                <h2>{activeTab === 'distribusi' ? 'Distribusi' : 'Laporan Sekolah'}</h2>
-                <p>Konten sedang diambil dari backend dan akan ditampilkan di sini.</p>
+            {activeTab === 'distribusi' && (
+              <div className="sppg-detail-content">
+                <div className="sppg-section">
+                  <div className="section-head">
+                    <h2>Distribusi Porsi</h2>
+                    <span className="badge-count">{filteredDistribusi.length} dari {detail.distribusi.length} Distribusi</span>
+                  </div>
+
+                  <div className="sppg-distribution-list">
+                    {filteredDistribusi.length > 0 ? filteredDistribusi.map((item) => (
+                      <article
+                        key={item.id}
+                        className={`sppg-distribution-card ${expandedDistribusiId === item.id ? 'expanded' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          className="sppg-distribution-summary clickable"
+                          onClick={() => setExpandedDistribusiId(expandedDistribusiId === item.id ? null : item.id)}
+                          aria-expanded={expandedDistribusiId === item.id}
+                        >
+                          <div className="sppg-distribution-summary-left">
+                            <div className="sppg-distribution-summary-heading">
+                              <div className="sppg-distribution-icon" aria-hidden="true">SD</div>
+                              <div>
+                                <h3>{item.sekolah}</h3>
+                                <p>{item.level}</p>
+                              </div>
+                            </div>
+                            <div className="sppg-distribution-meta-summary">
+                              <span>{item.level}</span>
+                              <span>{formatShortDate(item.tanggal)}</span>
+                              <span>{formatTime(item.createdAt ?? item.tanggal)}</span>
+                            </div>
+                          </div>
+                          <div className="sppg-distribution-summary-right">
+                            <span className="sppg-distribution-pill">{item.porsi} porsi</span>
+                            <span className={`sppg-distribution-chevron ${expandedDistribusiId === item.id ? 'open' : ''}`}>⌄</span>
+                          </div>
+                        </button>
+
+                        {expandedDistribusiId === item.id && (
+                          <div className="sppg-distribution-detail">
+                            <div className="sppg-distribution-menu-card">
+                              <div className="distribution-card-header">
+                                <span className="distribution-card-icon">M</span>
+                                <div>
+                                  <div className="distribution-card-title">Menu</div>
+                                  <div className="distribution-card-subtitle">Rincian makanan distribusi</div>
+                                </div>
+                              </div>
+                              <div className="distribution-menu-layout">
+                                <div className="distribution-menu-preview">
+                                    {item.fotoMenuUrl ? <img src={resolveImageUrl(item.fotoMenuUrl) ?? undefined} alt={`Foto menu ${item.sekolah}`} /> : <div className="distribution-menu-placeholder">Foto menu belum diinput</div>}
+                                </div>
+
+                                <div className="distribution-menu-content">
+                                  <h4>{item.menu}</h4>
+
+                                  <div className="distribution-nutrition-panel">
+                                    <div className="distribution-nutrition-panel-head">
+                                      <strong>Ringkasan Nutrisi</strong>
+                                    </div>
+                                    <div className="distribution-nutrition-grid">
+                                      <div className="distribution-nutrition-box tone-calorie">
+                                        <span>Total Kalori</span>
+                                        <strong>{formatNutrient(item.kalori)}</strong>
+                                      </div>
+                                      <div className="distribution-nutrition-box tone-protein">
+                                        <span>Total Protein</span>
+                                        <strong>{formatNutrientWithUnit(item.protein)}</strong>
+                                      </div>
+                                      <div className="distribution-nutrition-box tone-carb">
+                                        <span>Total Karbo</span>
+                                        <strong>{formatNutrientWithUnit(item.karbo)}</strong>
+                                      </div>
+                                      <div className="distribution-nutrition-box tone-fat">
+                                        <span>Total Lemak</span>
+                                        <strong>{formatNutrientWithUnit(item.lemak)}</strong>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="sppg-distribution-stats-grid">
+                              <div className="distribution-stat-box">
+                                <span>Porsi</span>
+                                <strong>{item.porsi}</strong>
+                              </div>
+                              <div className="distribution-stat-box">
+                                <span>Status</span>
+                                <strong>{item.status}</strong>
+                              </div>
+                            </div>
+                            <div className="sppg-distribution-note">
+                              <strong>Catatan:</strong> Distribusi data untuk sekolah ini pada tanggal terpilih.
+                            </div>
+                          </div>
+                        )}
+                      </article>
+                    )) : (
+                      <div className="sppg-empty-block">Belum ada distribusi yang terhubung.</div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
+
           </div>
         )}
       </div>

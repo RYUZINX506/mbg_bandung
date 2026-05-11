@@ -12,9 +12,10 @@ class MbgDemoSeeder extends Seeder
     public function run(): void
     {
         $this->seedLookupTables();
-        $this->seedUsers();
+        $this->seedRoles();
         $this->seedReferenceData();
         $this->seedOperationalData();
+        $this->seedUsers();
     }
 
     private function seedLookupTables(): void
@@ -60,6 +61,17 @@ class MbgDemoSeeder extends Seeder
 
     private function seedUsers(): void
     {
+        $sekolahByCode = [
+            'SEK-001' => DB::table('sekolah')->where('nama_sekolah', 'SD Negeri Cibiru 03')->value('id'),
+            'SEK-002' => DB::table('sekolah')->where('nama_sekolah', 'SMP Negeri Bandung Wetan 1')->value('id'),
+        ];
+
+        $sppgByCode = [
+            'SPPG-001' => DB::table('sppg')->where('kode_sppg', 'SPPG-001')->value('id'),
+            'SPPG-002' => DB::table('sppg')->where('kode_sppg', 'SPPG-002')->value('id'),
+            'GIZI-001' => DB::table('sppg')->where('kode_sppg', 'SPPG-003')->value('id'),
+        ];
+
         $users = [
             ['kode' => 'ADMIN-001', 'name' => 'Admin MBG', 'email' => 'admin@mbg.test', 'role' => 'admin'],
             ['kode' => 'GIZI-001', 'name' => 'Ahli Gizi Demo', 'email' => 'gizi@mbg.test', 'role' => 'ahli_gizi'],
@@ -67,9 +79,18 @@ class MbgDemoSeeder extends Seeder
             ['kode' => 'SEK-001', 'name' => 'Operator Sekolah', 'email' => 'sekolah@mbg.test', 'role' => 'sekolah'],
             ['kode' => 'SPPG-002', 'name' => 'Operator SPPG Timur', 'email' => 'sppg2@mbg.test', 'role' => 'sppg'],
             ['kode' => 'SEK-002', 'name' => 'Operator Sekolah Timur', 'email' => 'sekolah2@mbg.test', 'role' => 'sekolah'],
+            ['kode' => 'SUPERADMIN-001', 'name' => 'Superadmin MBG', 'email' => 'superadmin@mbg.test', 'role' => 'superadmin'],
         ];
 
         foreach ($users as $user) {
+            $sekolahId = $user['role'] === 'sekolah'
+                ? ($sekolahByCode[$user['kode']] ?? null)
+                : null;
+
+            $sppgId = in_array($user['role'], ['sppg', 'ahli_gizi'], true)
+                ? ($sppgByCode[$user['kode']] ?? null)
+                : null;
+
             User::query()->updateOrCreate(
                 ['kode' => $user['kode']],
                 [
@@ -77,7 +98,32 @@ class MbgDemoSeeder extends Seeder
                     'email' => $user['email'],
                     'role' => $user['role'],
                     'password' => Hash::make('password'),
+                    'sekolah_id' => $sekolahId,
+                    'sppg_id' => $sppgId,
                 ]
+            );
+        }
+
+        $giziUserId = User::query()->where('kode', 'GIZI-001')->value('id');
+        if ($giziUserId) {
+            DB::table('sppg')->where('kode_sppg', 'SPPG-003')->update(['ahli_gizi_id' => $giziUserId]);
+        }
+    }
+
+    private function seedRoles(): void
+    {
+        $roles = [
+            ['code' => 'superadmin', 'label' => 'Superadmin', 'description' => 'Akses penuh ke seluruh modul dan master data.', 'sort_order' => 1],
+            ['code' => 'admin', 'label' => 'Admin', 'description' => 'Akses pengelolaan data umum dan akun.', 'sort_order' => 2],
+            ['code' => 'ahli_gizi', 'label' => 'Ahli Gizi', 'description' => 'Akun ahli gizi untuk supervisi menu dan distribusi.', 'sort_order' => 3],
+            ['code' => 'sppg', 'label' => 'SPPG', 'description' => 'Akun operasional dapur SPPG.', 'sort_order' => 4],
+            ['code' => 'sekolah', 'label' => 'Sekolah', 'description' => 'Akun operasional sekolah.', 'sort_order' => 5],
+        ];
+
+        foreach ($roles as $role) {
+            DB::table('roles')->updateOrInsert(
+                ['code' => $role['code']],
+                $role
             );
         }
     }
@@ -115,6 +161,10 @@ class MbgDemoSeeder extends Seeder
             ]
         );
 
+        DB::table('user_profiles')->updateOrInsert(
+            ['role' => 'superadmin'],
+            ['role' => 'superadmin']
+        );
         DB::table('user_profiles')->updateOrInsert(
             ['role' => 'admin'],
             ['role' => 'admin']
@@ -363,12 +413,6 @@ class MbgDemoSeeder extends Seeder
         $sppgBandungWetanId = DB::table('sppg')->where('kode_sppg', 'SPPG-002')->value('id');
         $sppgCoblongId = DB::table('sppg')->where('kode_sppg', 'SPPG-003')->value('id');
 
-        User::query()->where('kode', 'SEK-001')->update(['sekolah_id' => $sekolahCibiruId]);
-        User::query()->where('kode', 'SEK-002')->update(['sekolah_id' => $sekolahBandungWetanId]);
-        User::query()->where('kode', 'SPPG-001')->update(['sppg_id' => $sppgSukasariId]);
-        User::query()->where('kode', 'SPPG-002')->update(['sppg_id' => $sppgBandungWetanId]);
-        User::query()->where('kode', 'GIZI-001')->update(['sppg_id' => $sppgCoblongId]);
-
         $sekolahId = $sekolahCibiruId;
         $sekolahId2 = $sekolahCoblongId;
         $sekolahId3 = $sekolahSumurBandungId;
@@ -616,6 +660,124 @@ class MbgDemoSeeder extends Seeder
             ]
         );
 
+        $schoolReportSeries = [
+            ['sekolah_id' => $sekolahId, 'base_penerima' => 245, 'latitude' => -6.9231, 'longitude' => 107.6954, 'alamat' => 'Jl. Pendidikan No. 3, Cibiru'],
+            ['sekolah_id' => $sekolahId2, 'base_penerima' => 280, 'latitude' => -6.8862, 'longitude' => 107.6142, 'alamat' => 'Jl. Dago Atas No. 20, Coblong'],
+            ['sekolah_id' => $sekolahId3, 'base_penerima' => 198, 'latitude' => -6.9218, 'longitude' => 107.6096, 'alamat' => 'Jl. Asia Afrika No. 5, Sumur Bandung'],
+        ];
+
+        $sppgReportSeries = [
+            ['sppg_id' => $sppgId, 'sekolah_id' => $sekolahId, 'base_porsi' => 245, 'menu' => 'Nasi, ayam kecap, sayur bening'],
+            ['sppg_id' => $sppgId2, 'sekolah_id' => $sekolahId2, 'base_porsi' => 280, 'menu' => 'Nasi, tempe orek, sayur lodeh'],
+            ['sppg_id' => $sppgId3, 'sekolah_id' => $sekolahId3, 'base_porsi' => 198, 'menu' => 'Nasi, ayam suwir, tumis wortel'],
+        ];
+
+        for ($offset = 0; $offset < 5; $offset++) {
+            $date = now()->startOfDay()->addDays($offset)->toDateString();
+
+            foreach ($schoolReportSeries as $index => $schoolReport) {
+                $laporanPenerima = $this->randomizeAround($schoolReport['base_penerima'], 16);
+                $dikonsumsi = max(0, $laporanPenerima - random_int(0, min(8, $laporanPenerima)));
+                $sisa = max(0, $laporanPenerima - $dikonsumsi);
+
+                DB::table('laporan_sekolah')->updateOrInsert(
+                    ['sekolah_id' => $schoolReport['sekolah_id'], 'tanggal' => $date],
+                    [
+                        'sekolah_id' => $schoolReport['sekolah_id'],
+                        'tanggal' => $date,
+                        'jumlah_penerima' => $laporanPenerima,
+                        'jumlah_dikonsumsi' => $dikonsumsi,
+                        'sisa' => $sisa,
+                        'keterangan' => $offset === 0 ? 'Laporan hari ini.' : 'Laporan demo otomatis.',
+                        'created_at' => now(),
+                    ]
+                );
+
+                $laporanId = DB::table('laporan_sekolah')
+                    ->where('sekolah_id', $schoolReport['sekolah_id'])
+                    ->where('tanggal', $date)
+                    ->value('id');
+
+                if ($laporanId) {
+                    DB::table('laporan_lokasi')->updateOrInsert(
+                        ['laporan_sekolah_id' => $laporanId],
+                        [
+                            'laporan_sekolah_id' => $laporanId,
+                            'latitude' => $schoolReport['latitude'],
+                            'longitude' => $schoolReport['longitude'],
+                            'akurasi' => random_int(80, 180) / 10,
+                            'alamat' => $schoolReport['alamat'],
+                        ]
+                    );
+
+                    DB::table('file_path')->updateOrInsert(
+                        ['laporan_sekolah_id' => $laporanId, 'jenis' => 'menu'],
+                        [
+                            'laporan_sekolah_id' => $laporanId,
+                            'jenis' => 'menu',
+                            'file' => 'reports/school/menu/' . $schoolReport['sekolah_id'] . '-' . $date . '.jpg',
+                            'created_at' => now(),
+                        ]
+                    );
+
+                    DB::table('file_path')->updateOrInsert(
+                        ['laporan_sekolah_id' => $laporanId, 'jenis' => 'siswa_makan'],
+                        [
+                            'laporan_sekolah_id' => $laporanId,
+                            'jenis' => 'siswa_makan',
+                            'file' => 'reports/school/student/' . $schoolReport['sekolah_id'] . '-' . $date . '.jpg',
+                            'created_at' => now(),
+                        ]
+                    );
+                }
+            }
+
+            foreach ($sppgReportSeries as $index => $sppgReport) {
+                $porsi = $this->randomizeAround($sppgReport['base_porsi'], 20);
+
+                DB::table('laporan_sppg')->updateOrInsert(
+                    ['sppg_id' => $sppgReport['sppg_id'], 'sekolah_id' => $sppgReport['sekolah_id'], 'tanggal' => $date],
+                    [
+                        'sppg_id' => $sppgReport['sppg_id'],
+                        'sekolah_id' => $sppgReport['sekolah_id'],
+                        'bahan_baku_id' => $bahanBakuId,
+                        'tanggal' => $date,
+                        'porsi_distribusi' => $porsi,
+                        'kalori' => random_int(620, 665),
+                        'protein' => random_int(18, 24),
+                        'karbo' => random_int(76, 84),
+                        'lemak' => random_int(15, 20),
+                        'status_delivery' => 'Terkirim',
+                        'status_terkirim' => 'Sukses',
+                        'distributed_by' => $giziUserId,
+                    ]
+                );
+
+                $laporanSppgId = DB::table('laporan_sppg')
+                    ->where('sppg_id', $sppgReport['sppg_id'])
+                    ->where('sekolah_id', $sppgReport['sekolah_id'])
+                    ->where('tanggal', $date)
+                    ->value('id');
+
+                if ($laporanSppgId) {
+                    DB::table('menu')->updateOrInsert(
+                        ['distribusi_id' => $laporanSppgId, 'code' => 'MNU-' . ($offset + 1) . '-' . ($index + 1)],
+                        [
+                            'distribusi_id' => $laporanSppgId,
+                            'code' => 'MNU-' . ($offset + 1) . '-' . ($index + 1),
+                            'deskripsi' => $sppgReport['menu'],
+                            'kategori' => $offset === 0 ? 'Menu Harian' : 'Menu Demo',
+                            'kalori' => random_int(620, 665),
+                            'protein' => random_int(18, 24),
+                            'karbohidrat' => random_int(76, 84),
+                            'lemak' => random_int(15, 20),
+                            'jumlah' => $porsi,
+                        ]
+                    );
+                }
+            }
+        }
+
         DB::table('pengaduan')->updateOrInsert(
             ['nama' => 'Demo Pengadu'],
             [
@@ -629,5 +791,10 @@ class MbgDemoSeeder extends Seeder
                 'sekolah' => 'SD Negeri Cibiru 03',
             ]
         );
+    }
+
+    private function randomizeAround(int $baseValue, int $spread): int
+    {
+        return max(0, random_int(max(0, $baseValue - $spread), $baseValue + $spread));
     }
 }

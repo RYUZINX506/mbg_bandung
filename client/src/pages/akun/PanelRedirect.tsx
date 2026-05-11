@@ -13,14 +13,16 @@ export default function PanelRedirect() {
       return
     }
 
-    if (role === 'admin') {
+    if (role === 'superadmin') {
       navigate('/admin')
+    } else if (role === 'admin') {
+      navigate('/admin-dashboard')
     } else if (role === 'sekolah') {
       navigate('/panelsekolah')
     } else if (role === 'sppg') {
       navigate('/panelsppg')
     } else {
-      navigate('/dashboard')
+      navigate('/admin-dashboard')
     }
   }, [navigate, token, role])
 
