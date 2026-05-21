@@ -45,6 +45,108 @@
   text-shadow: 0 1px 2px rgba(2, 6, 23, 0.2);
 }
 
+.sppg-hero-card {
+  background: linear-gradient(120deg, #1d4ed8 0%, #2563eb 55%, #0ea5e9 100%);
+  color: white;
+  border-radius: 18px;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  box-shadow: 0 16px 30px -22px rgba(30, 64, 175, 0.55);
+  padding: 1.8rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.sppg-hero-copy {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.sppg-hero-eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.sppg-hero-card h1 {
+  margin: 0 0 0.4rem 0;
+  font-size: clamp(1.4rem, 1.9vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.22);
+}
+
+.sppg-hero-card p {
+  margin: 0;
+  font-size: 0.86rem;
+  opacity: 0.93;
+  line-height: 1.45;
+  max-width: 700px;
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.2);
+}
+
+.sppg-hero-address {
+  margin: 0;
+  font-size: 0.86rem;
+  opacity: 0.93;
+  line-height: 1.45;
+  max-width: 700px;
+  text-shadow: 0 1px 2px rgba(2, 6, 23, 0.2);
+}
+
+.sppg-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.sppg-hero-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sppg-hero-actions {
+  display: grid;
+  gap: 0.65rem;
+  justify-items: end;
+}
+
+.sppg-hero-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1d4ed8;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 12px 20px -18px rgba(15, 23, 42, 0.4);
+}
+
+.sppg-hero-button.ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.sppg-hero-button:hover {
+  transform: translateY(-1px);
+}
+
 .sppg-status {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -104,10 +206,13 @@
 
 .sppg-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
-  justify-content: center;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.95rem;
   margin-bottom: 1.4rem;
+}
+
+.sppg-summary-grid {
+  margin-bottom: 1.55rem;
 }
 
 .sppg-stat-card {
@@ -210,10 +315,113 @@
   letter-spacing: 0.01em;
 }
 
+.sppg-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.sppg-info-grid > .sppg-section {
+  margin-top: 0;
+}
+
+.sppg-info-map,
+.sppg-info-photo {
+  grid-column: 1 / -1;
+}
+
+.sppg-info-grid .map-card,
+.sppg-info-grid .nutrition-card,
+.sppg-info-grid .contact-grid,
+.sppg-info-grid .certificate-card,
+.sppg-info-grid .facility-card,
+.sppg-info-grid .photo-card {
+  width: 100%;
+}
+
+.sppg-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.sppg-location-column,
+.sppg-side-column {
+  display: grid;
+  gap: 0.95rem;
+  align-content: start;
+}
+
+.sppg-map-card {
+  overflow: hidden;
+}
+
+.sppg-map-frame {
+  width: 100%;
+  min-height: 260px;
+  border: 0;
+  display: block;
+  border-radius: 12px;
+  background: #e2e8f0;
+}
+
+.sppg-map-footer {
+  margin-top: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 0.8rem;
+}
+
+.sppg-map-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.sppg-map-value {
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.photo-empty {
+  width: 100%;
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  padding: 1rem;
+  color: #475569;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%);
+  border-radius: 14px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+}
+
+.photo-empty strong {
+  color: #0f172a;
+}
+
+.photo-empty p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
 .contact-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
+  align-items: stretch;
+}
+
+.contact-grid .contact-card:first-child {
+  grid-column: span 2;
 }
 
 .contact-card {
@@ -222,6 +430,7 @@
   padding: 1rem 1.05rem;
   background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%);
   box-shadow: 0 14px 24px -18px rgba(15, 23, 42, 0.5);
+  min-height: 112px;
 }
 
 .contact-card:first-child {
@@ -286,9 +495,22 @@
 .certificate-card {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 18px;
+  min-height: 220px;
   padding: 1.1rem;
+
+.sppg-info-photo .photo-card {
+  min-height: 240px;
+}
   background: #ffffff;
   box-shadow: 0 14px 24px -18px rgba(15, 23, 42, 0.45);
+}
+
+.sppg-map-card,
+.facility-card,
+.photo-card,
+.nutrition-card,
+.certificate-card {
+  width: 100%;
 }
 
 .facility-card {
@@ -301,12 +523,13 @@
   border-color: rgba(148, 163, 184, 0.28);
   display: grid;
   place-items: center;
+  min-height: 220px;
 }
 
 .map-placeholder {
   background: radial-gradient(500px 220px at 20% 0%, rgba(59, 130, 246, 0.14), transparent 65%), #f8fafc;
   border-radius: 12px;
-  min-height: 180px;
+  min-height: 220px;
   display: grid;
   place-items: center;
   text-align: center;
@@ -340,6 +563,15 @@
   background: #1d4ed8;
 }
 
+.download-btn.disabled {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.7;
+  cursor: default;
+  pointer-events: none;
+  text-decoration: none;
+}
+
 .facility-list {
   display: flex;
   flex-wrap: wrap;
@@ -366,7 +598,7 @@
   width: 100%;
   max-width: 420px;
   height: auto;
-  max-height: 260px;
+  max-height: 240px;
   object-fit: cover;
   border-radius: 14px;
 }
@@ -377,6 +609,7 @@
   align-items: center;
   background: #ecfdf5;
   border-color: #bbf7d0;
+  min-height: 112px;
 }
 
 .nutrition-card .avatar {
@@ -406,6 +639,7 @@
 .certificate-card {
   background: linear-gradient(145deg, #ffffff 0%, #f9f3f4 100%);
   border-color: rgba(148, 163, 184, 0.28);
+  min-height: 112px;
 }
 
 .certificate-header {
@@ -443,6 +677,12 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
+}
+
+.certificate-note {
+  margin-top: 0.85rem;
+  font-size: 0.8rem;
+  color: #6b7280;
 }
 
 .date-label {
@@ -1159,9 +1399,14 @@
     padding: 2rem 1rem 3rem;
   }
 
-  .sppg-header-card {
+  .sppg-header-card,
+  .sppg-hero-card {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .sppg-hero-actions {
+    justify-items: start;
   }
 
   .sppg-tabs {
@@ -1187,9 +1432,31 @@
     grid-template-columns: 1fr;
   }
 
+  .sppg-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sppg-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sppg-info-map,
+  .sppg-info-photo {
+    grid-column: auto;
+  }
+
   .contact-grid,
   .certificate-dates {
     grid-template-columns: 1fr;
+  }
+
+  .contact-grid .contact-card:first-child {
+    grid-column: span 1;
+  }
+
+  .sppg-map-footer {
+    flex-direction: column;
+    align-items: start;
   }
 
   .distribution-menu-layout,

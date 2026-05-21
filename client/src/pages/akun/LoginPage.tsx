@@ -2,7 +2,6 @@ import { useRef, useState } from 'react'
 import ReCAPTCHA from 'react-google-recaptcha'
 import { useNavigate } from 'react-router-dom'
 import { apiRequest } from '../../config/api'
-import { PRIVATE_LOGIN_PATH } from '../../config/privateRoutes'
 import '../../styles/LoginPage.css'
 
 type LoginResponse = {
@@ -75,7 +74,7 @@ export default function LoginPage() {
       setCaptchaToken(null)
       navigate(
         userRole === 'superadmin'
-          ? '/admin'
+          ? '/superadmin'
           : userRole === 'admin'
           ? '/admin-dashboard'
           : userRole === 'sekolah'

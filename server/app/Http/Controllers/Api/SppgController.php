@@ -77,8 +77,11 @@ class SppgController extends Controller
                 's.kapasitas_harian',
                 's.no_telepon_pengelola',
                 's.email_pengelola',
+                's.nama_pengelola',
                 's.fasilitas_dapur',
                 's.sertifikat',
+                's.latitude',
+                's.longitude',
                 'k.nama_kecamatan',
                 'jd.nama as jenis_dapur',
                 'u.name as ahli_gizi_nama',
@@ -266,6 +269,26 @@ class SppgController extends Controller
                 'name' => $sppg->nama_sppg,
                 'address' => $sppg->alamat ?? '-',
                 'status' => $sppg->status_operasional ?? 'Aktif',
+                'location' => [
+                    'latitude' => $sppg->latitude !== null ? (float) $sppg->latitude : null,
+                    'longitude' => $sppg->longitude !== null ? (float) $sppg->longitude : null,
+                    'address' => $sppg->alamat ?? '-',
+                    'district' => $sppg->nama_kecamatan ?? '-',
+                    'mapUrl' => $sppg->latitude !== null && $sppg->longitude !== null
+                        ? sprintf(
+                            'https://www.openstreetmap.org/export/embed.html?bbox=%1$s,%2$s,%3$s,%4$s&layer=mapnik&marker=%5$s,%6$s',
+                            (float) $sppg->longitude - 0.01,
+                            (float) $sppg->latitude - 0.01,
+                            (float) $sppg->longitude + 0.01,
+                            (float) $sppg->latitude + 0.01,
+                            (float) $sppg->latitude,
+                            (float) $sppg->longitude,
+                        )
+                        : null,
+                    'mapsLink' => $sppg->latitude !== null && $sppg->longitude !== null
+                        ? sprintf('https://www.openstreetmap.org/?mlat=%1$s&mlon=%2$s#map=17/%1$s/%2$s', (float) $sppg->latitude, (float) $sppg->longitude)
+                        : null,
+                ],
                 'stats' => [
                     [
                         'label' => 'Lokasi',
@@ -291,9 +314,10 @@ class SppgController extends Controller
                 'contact' => [
                     'phone' => $sppg->no_telepon_pengelola ?? '-',
                     'email' => $sppg->email_pengelola ?? '-',
+                    'name' => $sppg->nama_pengelola ?? '-',
                 ],
                 'facilities' => $facilityList->isNotEmpty() ? $facilityList : ['Data fasilitas belum diisi'],
-                'photos' => ['https://via.placeholder.com/260x160'],
+                'photos' => [],
                 'nutritionist' => [
                     'name' => $sppg->ahli_gizi_nama ?? 'Belum diisi',
                     'title' => 'Ahli Gizi',

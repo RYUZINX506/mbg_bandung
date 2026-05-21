@@ -8,6 +8,7 @@ import SearchSPPGPage from './pages/sppg/SearchSPPGPage'
 import SPPGDetailPage from './pages/sppg/SPPGDetailPage'
 import ContactPage from './pages/ContactPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import { Navigate } from 'react-router-dom'
 
 import AdminDashboardPage from './pages/akun/AdminDashboardPage'
 import SuperAdminPanelPage from './pages/akun/SuperAdminPanelPage'
@@ -35,7 +36,8 @@ function App() {
         <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
         <Route path="/panel" element={<PanelRedirect />} />
         <Route path="/panel/:role" element={<RolePanelPage />} />
-        <Route path="/admin" element={<SuperAdminPanelPage />} />
+        <Route path="/admin" element={<Navigate to="/superadmin" replace />} />
+        <Route path="/superadmin" element={<SuperAdminPanelPage />} />
         <Route path="/panelsekolah" element={<SekolahPanelPage />} />
         <Route path="/panelsppg" element={<SppgPanelPage />} />
         <Route path="/login" element={<LoginPage />} />

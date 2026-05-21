@@ -11,13 +11,6 @@ const shortDateFormatter = new Intl.DateTimeFormat('id-ID', {
   year: 'numeric',
 })
 
-const longDateFormatter = new Intl.DateTimeFormat('id-ID', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-})
-
 const numberFormatter = new Intl.NumberFormat('id-ID')
 
 const timeFormatter = new Intl.DateTimeFormat('id-ID', {
@@ -57,7 +50,15 @@ function resolveImageUrl(value: string | null | undefined) {
     return value
   }
 
-  return `http://127.0.0.1:8000${value.startsWith('/') ? value : `/${value}`}`
+  return `${window.location.origin}${value.startsWith('/') ? value : `/${value}`}`
+}
+
+function formatCoordinate(value: number | null) {
+  if (value === null || Number.isNaN(value)) {
+    return '-'
+  }
+
+  return value.toFixed(6)
 }
 
 function getTodayInputValue() {
@@ -112,6 +113,11 @@ export default function SPPGDetailPage() {
   }, [filteredDistribusi])
 
   const showDateFilter = activeTab === 'distribusi'
+  const mapEmbedUrl = detail?.location.mapUrl ?? null
+  const mapLink = detail?.location.mapsLink ?? null
+  const coordinateLabel = detail
+    ? `${formatCoordinate(detail.location.latitude)}, ${formatCoordinate(detail.location.longitude)}`
+    : '-'
 
   return (
     <>
@@ -131,13 +137,31 @@ export default function SPPGDetailPage() {
 
         {detail && !loading && !error && (
           <div className="sppg-detail-shell">
-            <div className="sppg-header-card">
-              <div>
+            <section className="sppg-hero-card">
+              <div className="sppg-hero-copy">
+                <p className="sppg-hero-eyebrow">Makan Bergizi Gratis</p>
                 <h1>{detail.name}</h1>
-                <p>{detail.address}</p>
+                <p className="sppg-hero-address">{detail.address}</p>
+                <div className="sppg-hero-meta">
+                  <span>{detail.location.district}</span>
+                  <span>{detail.status}</span>
+                  <span>{detail.servedSchools.length} sekolah dilayani</span>
+                </div>
               </div>
-              <span className="sppg-status">{detail.status}</span>
-            </div>
+              <div className="sppg-hero-actions">
+                <button type="button" className="sppg-hero-button ghost" onClick={() => navigate('/sppg')}>
+                  Kembali ke daftar SPPG
+                </button>
+                <a
+                  className="sppg-hero-button"
+                  href={mapLink ?? `https://www.openstreetmap.org/search?query=${encodeURIComponent(detail.address)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Buka peta
+                </a>
+              </div>
+            </section>
 
             <div className="sppg-tabs">
               {['info', 'distribusi'].map(tab => (
@@ -169,7 +193,7 @@ export default function SPPGDetailPage() {
 
             {activeTab === 'info' && (
               <div className="sppg-detail-content">
-                <div className="sppg-stats-grid">
+                <div className="sppg-stats-grid sppg-summary-grid">
                   {detail.stats.map(item => (
                     <div key={item.label} className="sppg-stat-card">
                       <div className="stat-label">{item.label}</div>
@@ -179,75 +203,135 @@ export default function SPPGDetailPage() {
                   ))}
                 </div>
 
-                <div className="sppg-section">
-                  <h2>Informasi Kontak</h2>
-                  <div className="contact-grid">
-                    <div className="contact-card">
-                      <div className="contact-head">
-                        <div className="contact-title">Telepon</div>
-                        <span className="contact-tag">Aktif</span>
+                <div className="sppg-info-grid">
+                  <div className="sppg-section sppg-info-map">
+                    <div className="section-head">
+                      <h2>Lokasi Dapur</h2>
+                      <span className="badge-count">Peta</span>
+                    </div>
+                    <div className="map-card sppg-map-card">
+                      {mapEmbedUrl ? (
+                        <iframe
+                          className="sppg-map-frame"
+                          title={`Peta lokasi ${detail.name}`}
+                          src={mapEmbedUrl}
+                          loading="lazy"
+                          referrerPolicy="no-referrer-when-downgrade"
+                        />
+                      ) : (
+                        <div className="map-placeholder">
+                          <div className="map-icon" aria-hidden="true">⌖</div>
+                          <strong>Koordinat tidak tersedia</strong>
+                          <p>Lokasi dapur belum memiliki titik peta yang valid.</p>
+                        </div>
+                      )}
+                      <div className="sppg-map-footer">
+                        <div>
+                          <div className="sppg-map-label">Koordinat</div>
+                          <div className="sppg-map-value">{coordinateLabel}</div>
+                          <div className="contact-meta">{detail.location.address}</div>
+                        </div>
+                        <a className="map-action" href={mapLink ?? `https://www.openstreetmap.org/search?query=${encodeURIComponent(detail.address)}`} target="_blank" rel="noreferrer">
+                          Buka peta
+                        </a>
                       </div>
-                      <a href={`tel:${detail.contact.phone}`} className="contact-value link">{detail.contact.phone}</a>
-                    </div>
-                    <div className="contact-card">
-                      <div className="contact-head">
-                        <div className="contact-title">Email</div>
-                        <span className="contact-tag">Aktif</span>
-                      </div>
-                      <a href={`mailto:${detail.contact.email}`} className="contact-value link">{detail.contact.email}</a>
                     </div>
                   </div>
-                </div>
 
-                <div className="sppg-section">
-                  <h2>Fasilitas Dapur</h2>
-                  <div className="facility-card">
-                    <div className="facility-list">
-                      {detail.facilities.map(item => (
-                        <span key={item} className="facility-pill">{item}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="sppg-section">
-                  <h2>Foto Dapur</h2>
-                  <div className="photo-card">
-                    <img src={detail.photos[0]} alt="Tampak dapur" />
-                  </div>
-                </div>
-
-                <div className="sppg-section">
-                  <h2>Data Ahli Gizi</h2>
-                  <div className="nutrition-card">
-                    <div className="avatar"></div>
-                    <div>
-                      <div className="nutrition-name">{detail.nutritionist.name}</div>
-                      <div className="nutrition-title">{detail.nutritionist.title}</div>
-                      <div className="nutrition-org">{detail.nutritionist.org}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="sppg-section">
-                  <h2>Sertifikat Laik Higiene Sanitasi (SLHS)</h2>
-                  <div className="certificate-card">
-                    <div className="certificate-header">
+                  <div className="sppg-section">
+                    <h2>Data Ahli Gizi</h2>
+                    <div className="nutrition-card">
+                      <div className="avatar"></div>
                       <div>
-                        <div className="certificate-title">{detail.certificate.name}</div>
-                        <div className="certificate-number">{detail.certificate.number}</div>
+                        <div className="nutrition-name">{detail.nutritionist.name}</div>
+                        <div className="nutrition-title">{detail.nutritionist.title}</div>
+                        <div className="nutrition-org">{detail.nutritionist.org}</div>
                       </div>
-                      <button className="download-btn">Download</button>
                     </div>
-                    <div className="certificate-dates">
-                      <div>
-                        <div className="date-label">Diterbitkan</div>
-                        <div className="date-value">{detail.certificate.issued}</div>
+                  </div>
+
+                  <div className="sppg-section">
+                    <h2>Informasi Kontak</h2>
+                    <div className="contact-grid">
+                      <div className="contact-card">
+                        <div className="contact-head">
+                          <div className="contact-title">Pengelola</div>
+                          <span className="contact-tag">SPPG</span>
+                        </div>
+                        <div className="contact-value">{detail.contact.name}</div>
+                        <div className="contact-meta">Penanggung jawab operasional dapur.</div>
                       </div>
-                      <div>
-                        <div className="date-label">Berlaku hingga</div>
-                        <div className="date-value">{detail.certificate.validUntil}</div>
+                      <div className="contact-card">
+                        <div className="contact-head">
+                          <div className="contact-title">Telepon</div>
+                          <span className="contact-tag">Aktif</span>
+                        </div>
+                        {detail.contact.phone !== '-' ? (
+                          <a href={`tel:${detail.contact.phone}`} className="contact-value link">{detail.contact.phone}</a>
+                        ) : (
+                          <div className="contact-value">-</div>
+                        )}
                       </div>
+                      <div className="contact-card">
+                        <div className="contact-head">
+                          <div className="contact-title">Email</div>
+                          <span className="contact-tag">Aktif</span>
+                        </div>
+                        {detail.contact.email !== '-' ? (
+                          <a href={`mailto:${detail.contact.email}`} className="contact-value link">{detail.contact.email}</a>
+                        ) : (
+                          <div className="contact-value">-</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sppg-section">
+                    <h2>Sertifikat Laik Higiene Sanitasi (SLHS)</h2>
+                    <div className="certificate-card">
+                      <div className="certificate-header">
+                        <div>
+                          <div className="certificate-title">{detail.certificate.name}</div>
+                          <div className="certificate-number">{detail.certificate.number}</div>
+                        </div>
+                        <span className="download-btn disabled">Dokumen</span>
+                      </div>
+                      <div className="certificate-dates">
+                        <div>
+                          <div className="date-label">Diterbitkan</div>
+                          <div className="date-value">{detail.certificate.issued}</div>
+                        </div>
+                        <div>
+                          <div className="date-label">Berlaku hingga</div>
+                          <div className="date-value">{detail.certificate.validUntil}</div>
+                        </div>
+                      </div>
+                      <div className="certificate-note">Data sertifikat akan tampil ketika dokumen sudah diunggah.</div>
+                    </div>
+                  </div>
+
+                  <div className="sppg-section">
+                    <h2>Fasilitas Dapur</h2>
+                    <div className="facility-card">
+                      <div className="facility-list">
+                        {detail.facilities.map(item => (
+                          <span key={item} className="facility-pill">{item}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sppg-section sppg-info-photo">
+                    <h2>Foto Dapur</h2>
+                    <div className="photo-card">
+                      {detail.photos.length > 0 ? (
+                        <img src={resolveImageUrl(detail.photos[0]) ?? undefined} alt="Tampak dapur" />
+                      ) : (
+                        <div className="photo-empty">
+                          <strong>Tidak ada foto dapur tersedia</strong>
+                          <p>Foto akan ditampilkan di sini ketika sudah diunggah.</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

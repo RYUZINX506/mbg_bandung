@@ -87,8 +87,8 @@ export default function SekolahPanelPage() {
     }
   }, [navigate, panel?.user.role])
 
-  const schoolName = panel?.profile.record?.nama_sekolah ?? panel?.user.name ?? '-'
-  const schoolAddress = panel?.profile.record?.alamat ?? 'Alamat belum tersedia'
+  const schoolName = String(panel?.profile.record?.nama_sekolah ?? panel?.user.name ?? '-')
+  const schoolAddress = String(panel?.profile.record?.alamat ?? 'Alamat belum tersedia')
 
   const recentReports = panel?.recent.reports ?? []
 

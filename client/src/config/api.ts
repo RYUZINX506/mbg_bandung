@@ -170,6 +170,14 @@ export type SppgDetail = {
   name: string
   address: string
   status: string
+  location: {
+    latitude: number | null
+    longitude: number | null
+    address: string
+    district: string
+    mapUrl: string | null
+    mapsLink: string | null
+  }
   stats: Array<{
     label: string
     value: string
@@ -178,6 +186,7 @@ export type SppgDetail = {
   contact: {
     phone: string
     email: string
+    name: string
   }
   facilities: string[]
   photos: string[]

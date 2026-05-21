@@ -5,17 +5,19 @@
 }
 
 .admin-layout {
-  width: min(1320px, 100%);
+  width: min(1640px, calc(100% - 1rem));
   margin: 0 auto;
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
 }
 
 .admin-sidebar {
   border-right: 1px solid #dbe4f0;
+  border-bottom: none;
   background: #f6f8fc;
   padding: 1rem 0.85rem;
+  padding-top: 1.6rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -35,7 +37,7 @@
 }
 
 .admin-nav {
-  margin-top: 1rem;
+  margin-top: 1.6rem;
   display: grid;
   gap: 0.35rem;
   max-height: calc(100vh - 180px);
@@ -102,10 +104,11 @@
 }
 
 .admin-main {
-  padding: 1rem;
+  padding: 1rem 1.25rem 1.45rem;
   display: grid;
   gap: 0.9rem;
   align-content: start;
+  width: 100%;
 }
 
 .admin-topbar {
@@ -329,7 +332,8 @@
 
 .admin-layout-mindmap,
 .admin-layout-superadmin {
-  grid-template-columns: 280px minmax(0, 1fr);
+  width: min(1760px, calc(100% - 0.6rem));
+  grid-template-columns: 300px minmax(0, 1fr);
 }
 
 .admin-sidebar-mindmap,
@@ -348,7 +352,7 @@
 }
 
 .admin-nav-superadmin {
-  padding-top: 0.25rem;
+  padding-top: 0.4rem;
 }
 
 .admin-sidebar-superadmin .admin-brand {
@@ -389,6 +393,11 @@
   padding-bottom: 1.25rem;
 }
 
+.admin-main-superadmin {
+  padding: 1.15rem 1.4rem 1.7rem;
+  gap: 1.15rem;
+}
+
 .admin-topbar-mindmap,
 .admin-topbar-superadmin {
   align-items: start;
@@ -399,16 +408,19 @@
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(239, 246, 255, 0.95) 100%);
   box-shadow: 0 22px 44px -30px rgba(15, 23, 42, 0.42);
-  padding: 1rem 1.1rem;
+  padding: 1.15rem 1.35rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) auto;
+  align-items: center;
 }
 
 .admin-topbar-superadmin h1 {
-  font-size: clamp(1.55rem, 2.6vw, 2rem);
+  font-size: clamp(1.8rem, 3vw, 2.35rem);
   color: #1e3a8a;
 }
 
 .admin-topbar-superadmin .admin-topbar-subtitle {
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   color: #475569;
 }
 
@@ -446,6 +458,7 @@
 .admin-stats-grid-mindmap,
 .admin-stats-grid-superadmin {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
 }
 
 .admin-stats-grid-superadmin .admin-stat-card {
@@ -453,6 +466,7 @@
   overflow: hidden;
   border-radius: 18px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  min-height: 92px;
 }
 
 .admin-stats-grid-superadmin .admin-stat-card::after {
@@ -470,8 +484,8 @@
 
 .admin-mindmap-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.95fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.1rem;
 }
 
 .admin-panel-hero,
@@ -488,6 +502,40 @@
 .admin-panel-note {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.98) 100%);
+}
+
+.admin-panel-hero,
+.admin-panel-note,
+.admin-modal {
+  padding: 1rem 1.05rem;
+}
+
+.admin-panel-hero .admin-panel-head,
+.admin-panel-note .admin-panel-head {
+  gap: 1rem;
+}
+
+/* Ringkasan Modul modal */
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+}
+
+.admin-modal {
+  width: min(720px, 96%);
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 20px 40px rgba(2,6,23,0.4);
+}
+
+.admin-modal .admin-panel-head {
+  margin-bottom: 0.6rem;
 }
 
 .admin-panel-eyebrow {
@@ -606,6 +654,8 @@
   display: grid;
   gap: 0.25rem;
   padding-top: 0.4rem;
+  min-width: min(280px, 100%);
+  flex: 1 1 280px;
 }
 
 .admin-group-title {
@@ -685,6 +735,7 @@
   .admin-sidebar {
     border-right: none;
     border-bottom: 1px solid #dbe4f0;
+    padding: 0.95rem 0.95rem 1rem;
   }
 
   .admin-nav {

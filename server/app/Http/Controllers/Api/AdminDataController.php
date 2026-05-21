@@ -13,6 +13,12 @@ use Throwable;
 
 class AdminDataController extends Controller
 {
+    private const DELETION_REQUEST_TABLE = 'admin_deletion_requests';
+
+    private const ADMIN_READ_ONLY_TABLES = [
+        'pengaduan',
+    ];
+
     private const MANAGED_TABLES = [
         'users',
         'roles',
@@ -33,6 +39,7 @@ class AdminDataController extends Controller
         'laporan_sppg',
         'menu',
         'pengaduan',
+        'admin_deletion_requests',
     ];
 
     public function stats(Request $request): JsonResponse
@@ -43,7 +50,7 @@ class AdminDataController extends Controller
             return response()->json(['message' => 'Akses admin dibutuhkan.'], 403);
         }
 
-        $counts = collect(self::MANAGED_TABLES)
+        $counts = collect($this->visibleTablesForUser($user))
             ->mapWithKeys(fn (string $table) => [$table => DB::table($table)->count()]);
 
         return response()->json([
@@ -68,11 +75,13 @@ class AdminDataController extends Controller
 
     public function schema(Request $request): JsonResponse
     {
-        if (! $this->resolveAdmin($request)) {
+        $user = $this->resolveAdmin($request);
+
+        if (! $user) {
             return response()->json(['message' => 'Akses admin dibutuhkan.'], 403);
         }
 
-        $tables = collect(self::MANAGED_TABLES)
+        $tables = collect($this->visibleTablesForUser($user))
             ->map(fn (string $table) => [
                 'name' => $table,
                 'label' => Str::of($table)->replace('_', ' ')->title()->toString(),
@@ -97,8 +106,16 @@ class AdminDataController extends Controller
             return response()->json(['message' => 'Akses superadmin dibutuhkan.'], 403);
         }
 
+        if ($table === self::DELETION_REQUEST_TABLE && ! $this->isSuperAdmin($user)) {
+            return response()->json(['message' => 'Akses superadmin dibutuhkan.'], 403);
+        }
+
         if (! $this->isAllowedTable($table)) {
             return response()->json(['message' => 'Tabel tidak diizinkan.'], 404);
+        }
+
+        if (! Schema::hasTable($table)) {
+            return response()->json(['message' => 'Tabel tidak ditemukan.'], 404);
         }
 
         $columns = Schema::getColumnListing($table);
@@ -151,6 +168,14 @@ class AdminDataController extends Controller
             return response()->json(['message' => 'Akses superadmin dibutuhkan.'], 403);
         }
 
+        if ($this->isReadOnlyTableForAdmin($table, $user)) {
+            return response()->json(['message' => 'Data ini hanya bisa dilihat oleh admin biasa.'], 403);
+        }
+
+        if ($table === self::DELETION_REQUEST_TABLE) {
+            return response()->json(['message' => 'Permintaan hapus hanya bisa dibuat dari aksi hapus data.'], 403);
+        }
+
         if (! $this->isAllowedTable($table)) {
             return response()->json(['message' => 'Tabel tidak diizinkan.'], 404);
         }
@@ -185,6 +210,14 @@ class AdminDataController extends Controller
 
         if ($this->isSensitiveTable($table) && ! $this->isSuperAdmin($user)) {
             return response()->json(['message' => 'Akses superadmin dibutuhkan.'], 403);
+        }
+
+        if ($this->isReadOnlyTableForAdmin($table, $user)) {
+            return response()->json(['message' => 'Data ini hanya bisa dilihat oleh admin biasa.'], 403);
+        }
+
+        if ($table === self::DELETION_REQUEST_TABLE) {
+            return $this->reviewDeletionRequest($request, $id, $user);
         }
 
         if (! $this->isAllowedTable($table)) {
@@ -229,17 +262,51 @@ class AdminDataController extends Controller
             return response()->json(['message' => 'Akses superadmin dibutuhkan.'], 403);
         }
 
+        if ($table === self::DELETION_REQUEST_TABLE) {
+            return response()->json(['message' => 'Permintaan hapus tidak dapat dihapus dari panel.'], 403);
+        }
+
         if (! $this->isAllowedTable($table)) {
             return response()->json(['message' => 'Tabel tidak diizinkan.'], 404);
         }
 
-        $deleted = DB::table($table)->where('id', $id)->delete();
+        if ($this->isReadOnlyTableForAdmin($table, $user)) {
+            return response()->json(['message' => 'Data ini hanya bisa dilihat oleh admin biasa.'], 403);
+        }
 
-        if (! $deleted) {
+        $record = DB::table($table)->where('id', $id)->first();
+
+        if (! $record) {
             return response()->json(['message' => 'Data tidak ditemukan.'], 404);
         }
 
-        return response()->json(['message' => 'Data berhasil dihapus.']);
+        $existingRequest = DB::table(self::DELETION_REQUEST_TABLE)
+            ->where('table_name', $table)
+            ->where('record_id', $id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($existingRequest) {
+            return response()->json(['message' => 'Permintaan hapus untuk data ini sudah menunggu persetujuan.'], 409);
+        }
+
+        DB::table(self::DELETION_REQUEST_TABLE)->insert([
+            'table_name' => $table,
+            'record_id' => $id,
+            'record_snapshot' => json_encode((array) $record, JSON_THROW_ON_ERROR),
+            'requested_by' => $user->id,
+            'requested_by_role' => $user->role,
+            'status' => 'pending',
+            'reason' => null,
+            'approved_by' => null,
+            'approved_at' => null,
+            'rejected_by' => null,
+            'rejected_at' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['message' => 'Permintaan hapus berhasil dikirim dan menunggu persetujuan superadmin.'], 202);
     }
 
     private function resolveAdmin(Request $request)
@@ -275,6 +342,26 @@ class AdminDataController extends Controller
     private function isSensitiveTable(string $table): bool
     {
         return in_array($table, ['users', 'user_profiles'], true);
+    }
+
+    private function isReadOnlyTableForAdmin(string $table, object $user): bool
+    {
+        return $user->role === 'admin' && in_array($table, self::ADMIN_READ_ONLY_TABLES, true);
+    }
+
+    private function visibleTablesForUser(object $user): array
+    {
+        $tables = $this->isSuperAdmin($user)
+            ? self::MANAGED_TABLES
+            : array_values(array_filter(
+                self::MANAGED_TABLES,
+                fn (string $table): bool => $table !== self::DELETION_REQUEST_TABLE
+            ));
+
+        return array_values(array_filter(
+            $tables,
+            fn (string $table): bool => Schema::hasTable($table)
+        ));
     }
 
     private function isAllowedTable(string $table): bool
@@ -336,6 +423,78 @@ class AdminDataController extends Controller
         }
 
         return $payload;
+    }
+
+    private function reviewDeletionRequest(Request $request, int $id, object $user): JsonResponse
+    {
+        if (! $this->isSuperAdmin($user)) {
+            return response()->json(['message' => 'Akses superadmin dibutuhkan.'], 403);
+        }
+
+        $payload = $request->input('data', []);
+
+        if (! is_array($payload)) {
+            return response()->json(['message' => 'Data permintaan tidak valid.'], 422);
+        }
+
+        $nextStatus = strtolower(trim((string) ($payload['status'] ?? '')));
+
+        if (! in_array($nextStatus, ['approved', 'rejected'], true)) {
+            return response()->json(['message' => 'Status harus approved atau rejected.'], 422);
+        }
+
+        $requestRow = DB::table(self::DELETION_REQUEST_TABLE)->where('id', $id)->first();
+
+        if (! $requestRow) {
+            return response()->json(['message' => 'Permintaan tidak ditemukan.'], 404);
+        }
+
+        if (($requestRow->status ?? null) !== 'pending') {
+            return response()->json(['message' => 'Permintaan ini sudah diproses sebelumnya.'], 409);
+        }
+
+        if ($nextStatus === 'rejected') {
+            DB::table(self::DELETION_REQUEST_TABLE)
+                ->where('id', $id)
+                ->update([
+                    'status' => 'rejected',
+                    'rejected_by' => $user->id,
+                    'rejected_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json(['message' => 'Permintaan hapus ditolak.']);
+        }
+
+        $targetTable = (string) $requestRow->table_name;
+        $targetId = (int) $requestRow->record_id;
+
+        if (! $this->isAllowedTable($targetTable) || $targetTable === self::DELETION_REQUEST_TABLE) {
+            return response()->json(['message' => 'Tabel target tidak valid.'], 422);
+        }
+
+        $targetRecord = DB::table($targetTable)->where('id', $targetId)->first();
+
+        if (! $targetRecord) {
+            return response()->json(['message' => 'Data target tidak ditemukan.'], 404);
+        }
+
+        DB::transaction(function () use ($user, $id, $targetTable, $targetId): void {
+            DB::table($targetTable)->where('id', $targetId)->delete();
+
+            DB::table(self::DELETION_REQUEST_TABLE)
+                ->where('id', $id)
+                ->update([
+                    'status' => 'approved',
+                    'approved_by' => $user->id,
+                    'approved_at' => now(),
+                    'rejected_by' => null,
+                    'rejected_at' => null,
+                    'updated_at' => now(),
+                ]);
+        });
+
+        return response()->json(['message' => 'Permintaan hapus disetujui dan data sudah dihapus.']);
     }
 
     private function readColumnMetadata(string $table): array

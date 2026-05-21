@@ -3,6 +3,9 @@ export type MindmapCard = {
   description: string
   table?: string
   note?: string
+  canCreate?: boolean
+  canUpdate?: boolean
+  canDelete?: boolean
 }
 
 export type MindmapSection = {
@@ -98,13 +101,19 @@ export const adminMindmapSections: MindmapSection[] = [
         label: 'Pengaduan Masuk',
         description: 'Lihat daftar pengaduan untuk diproses.',
         table: 'pengaduan',
-        note: 'Queue management',
+        note: 'Read only untuk admin biasa',
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
       },
       {
         label: 'Status Tindak Lanjut',
         description: 'Pantau progres penyelesaian pengaduan.',
         table: 'pengaduan',
-        note: 'Follow up',
+        note: 'Read only untuk admin biasa',
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
       },
     ],
   },
@@ -122,6 +131,12 @@ export const superadminTableGroups: TableGroup[] = [
     title: 'Data SPPG',
     description: 'Master data SPPG, sekolah, dan relasi pengguna.',
     tables: ['sppg', 'sekolah', 'users', 'user_profiles'],
+  },
+  {
+    key: 'persetujuan-hapus',
+    title: 'Persetujuan Hapus',
+    description: 'Tinjau dan setujui permintaan hapus data dari admin.',
+    tables: ['admin_deletion_requests'],
   },
   {
     key: 'rekapitulasi-laporan',
@@ -169,6 +184,7 @@ export const tableLabels: Record<string, string> = {
   laporan_sppg: 'Laporan SPPG',
   menu: 'Menu',
   pengaduan: 'Pengaduan',
+  admin_deletion_requests: 'Permintaan Hapus Data',
 }
 
 export const getTableLabel = (tableName: string): string => {

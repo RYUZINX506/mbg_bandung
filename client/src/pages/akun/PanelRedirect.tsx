@@ -14,7 +14,7 @@ export default function PanelRedirect() {
     }
 
     if (role === 'superadmin') {
-      navigate('/admin')
+      navigate('/superadmin')
     } else if (role === 'admin') {
       navigate('/admin-dashboard')
     } else if (role === 'sekolah') {
