@@ -6,18 +6,24 @@ function formatNumber(value: number) {
   return value.toLocaleString('id-ID')
 }
 
+function toLocalDateInputValue(date: Date) {
+  const timezoneOffset = date.getTimezoneOffset() * 60000
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 10)
+}
+
 export default function Statistics() {
   const [summary, setSummary] = useState<HomeResponse['data']['summary'] | null>(null)
+  const [selectedDate] = useState(() => toLocalDateInputValue(new Date()))
 
   useEffect(() => {
-    apiRequest<HomeResponse>('/home')
+    apiRequest<HomeResponse>(`/home?date=${selectedDate}`)
       .then((response) => {
         setSummary(response.data.summary)
       })
       .catch(() => {
         setSummary(null)
       })
-  }, [])
+  }, [selectedDate])
 
   const totalPenerimaHariIni = summary?.totalPenerimaHariIni ?? 0
   const totalTargetPenerima = summary?.totalTargetPenerima ?? 0

@@ -7,13 +7,32 @@ import '../../styles/RolePanelPage.css'
 type ProfileForm = Record<string, string>
 type ReportForm = Record<string, string>
 type MenuForm = Record<string, string>
+type SchoolAllocationForm = Record<string, { porsi: string; catatan: string }>
+
+type BahanBakuRow = {
+  id: string
+  nama: string
+  jumlah: string
+}
 
 type DistribusiPhotoState = {
   menu: File | null
 }
 const emptyProfileForm = (): ProfileForm => ({})
-const emptyReportForm = (): ReportForm => ({})
+const getLocalDateString = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+const emptyReportForm = (): ReportForm => ({ tanggal: getLocalDateString() })
 const emptyMenuForm = (): MenuForm => ({})
+const emptySchoolAllocationForm = (): SchoolAllocationForm => ({})
+
+const emptyBahanBakuRow = (): BahanBakuRow => ({ id: String(Date.now() + Math.random()), nama: '', jumlah: '' })
 
 export default function SppgPanelPage() {
   const [distribusiPhoto, setDistribusiPhoto] = useState<DistribusiPhotoState>({ menu: null })
@@ -23,11 +42,12 @@ export default function SppgPanelPage() {
   const [loading, setLoading] = useState(true)
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingReport, setSavingReport] = useState(false)
-  const [savingMenu, setSavingMenu] = useState(false)
   const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfileForm)
   const [reportForm, setReportForm] = useState<ReportForm>(emptyReportForm)
   const [menuForm, setMenuForm] = useState<MenuForm>(emptyMenuForm)
-  const [activeTab, setActiveTab] = useState<'distribusi' | 'riwayat' | 'profil' | 'menu'>('distribusi')
+  const [bahanBakuRows, setBahanBakuRows] = useState<BahanBakuRow[]>([emptyBahanBakuRow()])
+  const [schoolAllocationForm, setSchoolAllocationForm] = useState<SchoolAllocationForm>(emptySchoolAllocationForm)
+  const [activeTab, setActiveTab] = useState<'distribusi' | 'riwayat' | 'profil'>('distribusi')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -93,6 +113,45 @@ export default function SppgPanelPage() {
 
   const recentReports = panel?.recent.reports ?? []
 
+  const schoolOptions = panel?.options.sekolah ?? []
+
+  const addBahanBakuRow = () => {
+    setBahanBakuRows((prev) => [...prev, emptyBahanBakuRow()])
+  }
+
+  const removeBahanBakuRow = (id: string) => {
+    setBahanBakuRows((prev) => prev.filter((row) => row.id !== id))
+  }
+
+  const updateBahanBakuRow = (id: string, field: 'nama' | 'jumlah', value: string) => {
+    setBahanBakuRows((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, [field]: value } : row))
+    )
+  }
+
+  const resetDistributionForm = () => {
+    setReportForm(emptyReportForm())
+    setMenuForm(emptyMenuForm())
+    setBahanBakuRows([emptyBahanBakuRow()])
+    setSchoolAllocationForm(emptySchoolAllocationForm())
+    setDistribusiPhoto({ menu: null })
+  }
+
+  const toggleSchoolAllocation = (schoolId: number, checked: boolean) => {
+    setSchoolAllocationForm((prev) => {
+      if (!checked) {
+        const next = { ...prev }
+        delete next[String(schoolId)]
+        return next
+      }
+
+      return {
+        ...prev,
+        [String(schoolId)]: prev[String(schoolId)] ?? { porsi: '', catatan: '' },
+      }
+    })
+  }
+
   const handleProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -136,27 +195,62 @@ export default function SppgPanelPage() {
     setError('')
 
     try {
-      if (!reportForm.tanggal || !reportForm.sekolah_id) {
+      const selectedSchools = Object.entries(schoolAllocationForm)
+        .map(([sekolahId, data]) => ({
+          sekolah_id: sekolahId,
+          porsi_distribusi: String(data?.porsi ?? '').trim(),
+          keterangan: String(data?.catatan ?? '').trim(),
+        }))
+      const missingPorsiSchool = selectedSchools.find((item) => item.porsi_distribusi === '')
+
+      if (!reportForm.tanggal) {
         setSavingReport(false)
-        setError('Tanggal dan sekolah wajib diisi.')
+        setError('Tanggal wajib diisi.')
+        return
+      }
+
+      if (!menuForm.deskripsi?.trim()) {
+        setSavingReport(false)
+        setError('Deskripsi menu wajib diisi.')
+        return
+      }
+
+      if (missingPorsiSchool) {
+        setSavingReport(false)
+        setError('Isi porsi untuk semua sekolah yang dicentang.')
+        return
+      }
+
+      if (selectedSchools.length === 0) {
+        setSavingReport(false)
+        setError('Pilih minimal satu sekolah dan isi porsi distribusinya.')
         return
       }
 
       const formData = new FormData()
       formData.append('tanggal', reportForm.tanggal || '')
-      formData.append('sekolah_id', String(reportForm.sekolah_id || ''))
-      formData.append('porsi_distribusi', String(reportForm.porsi_distribusi || ''))
-      if (reportForm.menu_id) {
-        formData.append('menu_id', String(reportForm.menu_id || ''))
-      }
-      formData.append('status_delivery', reportForm.status_delivery || '')
-      formData.append('status_terkirim', reportForm.status_terkirim || '')
-      
+      formData.append('menu[deskripsi]', menuForm.deskripsi || '')
+      formData.append('menu[kalori]', menuForm.kalori || '')
+      formData.append('menu[protein]', menuForm.protein || '')
+      formData.append('menu[karbohidrat]', menuForm.karbohidrat || '')
+      formData.append('menu[lemak]', menuForm.lemak || '')
+      formData.append('menu[jumlah]', menuForm.jumlah || '')
+      // Bahan baku manual rows
+      bahanBakuRows
+        .filter((row) => row.nama.trim() !== '')
+        .forEach((row, index) => {
+          formData.append(`bahan_baku[${index}][nama]`, row.nama.trim())
+          formData.append(`bahan_baku[${index}][jumlah]`, row.jumlah.trim())
+        })
+      selectedSchools.forEach((item, index) => {
+        formData.append(`distributions[${index}][sekolah_id]`, item.sekolah_id)
+        formData.append(`distributions[${index}][porsi_distribusi]`, item.porsi_distribusi)
+        formData.append(`distributions[${index}][keterangan]`, item.keterangan)
+      })
+
       if (distribusiPhoto.menu) {
         formData.append('foto_menu', distribusiPhoto.menu)
       }
-
-      console.log('Form data:', { tanggal: reportForm.tanggal, sekolah_id: reportForm.sekolah_id })
 
       const response = await apiRequest<{ message: string }>('/panel/distribution', {
         method: 'POST',
@@ -167,52 +261,12 @@ export default function SppgPanelPage() {
       })
 
       setMessage(response.message)
-      setReportForm(emptyReportForm())
-      setDistribusiPhoto({ menu: null })
+      resetDistributionForm()
       await loadPanel()
     } catch (requestError) {
-      console.error('Distribution submission error:', requestError)
-      setError(requestError instanceof Error ? requestError.message : 'Gagal menyimpan laporan.')
+      setError(requestError instanceof Error ? requestError.message : 'Gagal menyimpan laporan distribusi.')
     } finally {
       setSavingReport(false)
-    }
-  }
-
-  const handleMenuSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    if (!token || !panel) {
-      return
-    }
-
-    setSavingMenu(true)
-    setMessage('')
-    setError('')
-
-    try {
-      if (!menuForm.deskripsi) {
-        setSavingMenu(false)
-        setError('Deskripsi menu wajib diisi.')
-        return
-      }
-
-      const response = await apiRequest<{ message: string; id: number }>('/panel/menu', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(menuForm),
-      })
-
-      setMessage(response.message)
-      setMenuForm(emptyMenuForm())
-      await loadPanel()
-    } catch (requestError) {
-      console.error('Menu submission error:', requestError)
-      setError(requestError instanceof Error ? requestError.message : 'Gagal menyimpan menu.')
-    } finally {
-      setSavingMenu(false)
     }
   }
 
@@ -245,7 +299,6 @@ export default function SppgPanelPage() {
         <section className="role-panel-tabs" aria-label="Navigasi modul panel">
           {[
             { key: 'distribusi', label: 'Input Distribusi' },
-            { key: 'menu', label: 'Manajemen Menu' },
             { key: 'riwayat', label: 'Riwayat Distribusi' },
             { key: 'profil', label: 'Profil SPPG' },
           ].map((tab) => (
@@ -253,7 +306,7 @@ export default function SppgPanelPage() {
               key={tab.key}
               type="button"
               className={`role-panel-tab ${activeTab === tab.key ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.key as 'distribusi' | 'menu' | 'riwayat' | 'profil')}
+              onClick={() => setActiveTab(tab.key as 'distribusi' | 'riwayat' | 'profil')}
             >
               {tab.label}
             </button>
@@ -334,142 +387,160 @@ export default function SppgPanelPage() {
               <header className="role-panel-card-head">
                 <div>
                   <h2>Input Distribusi Porsi</h2>
-                  <p>Catat distribusi porsi harian untuk sekolah yang dilayani.</p>
+                  <p>Isi menu sekali, lalu centang sekolah yang menerima dan tentukan porsi masing-masing.</p>
                 </div>
               </header>
 
               <form className="role-panel-form" onSubmit={handleReportSubmit}>
-                <label>
-                  Tanggal
-                  <input type="date" value={reportForm.tanggal ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, tanggal: event.target.value }))} />
-                </label>
+                <input type="hidden" value={reportForm.tanggal ?? getLocalDateString()} readOnly />
+                <div className="role-panel-inline-card role-panel-full">
+                  <h3>Data Menu</h3>
+                  <p>Menu dicatat langsung saat distribusi, jadi tidak perlu buka halaman terpisah.</p>
+                  <div className="role-panel-inline-grid">
+                    <div className="role-panel-inline-section role-panel-inline-span-2">
+                      <h4>Bahan Baku</h4>
+                      <p>Tambahkan bahan baku yang digunakan. Klik tombol di bawah untuk menambah baris baru.</p>
 
-                <label>
-                  Sekolah
-                  <select value={reportForm.sekolah_id ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, sekolah_id: event.target.value }))}>
-                    <option value="">Pilih sekolah</option>
-                    {panel.options.sekolah.map((school) => (
-                      <option key={school.id} value={school.id}>{school.nama_sekolah}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Porsi Distribusi
-                  <input type="number" value={reportForm.porsi_distribusi ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, porsi_distribusi: event.target.value }))} />
-                </label>
-                <label>
-                  Menu
-                  <select value={reportForm.menu_id ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, menu_id: event.target.value }))}>
-                    <option value="">-- Pilih Menu --</option>
-                    {(panel?.options.menus ?? []).map((menu: any) => (
-                      <option key={menu.id} value={menu.id}>{menu.code ?? menu.id} - {menu.deskripsi}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Status Pengiriman
-                  <input value={reportForm.status_delivery ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, status_delivery: event.target.value }))} />
-                </label>
+                      <div className="role-panel-bahan-rows">
+                        {bahanBakuRows.map((row, index) => (
+                          <div key={row.id} className="role-panel-bahan-row">
+                            <span className="role-panel-bahan-row-num">{index + 1}</span>
+                            <label className="role-panel-bahan-row-label">
+                              Nama Bahan
+                              <input
+                                type="text"
+                                value={row.nama}
+                                onChange={(event) => updateBahanBakuRow(row.id, 'nama', event.target.value)}
+                                placeholder="Contoh: Beras, Ayam, Tahu"
+                              />
+                            </label>
+                            <label className="role-panel-bahan-row-label">
+                              Jumlah
+                              <input
+                                type="text"
+                                value={row.jumlah}
+                                onChange={(event) => updateBahanBakuRow(row.id, 'jumlah', event.target.value)}
+                                placeholder="Contoh: 5 kg"
+                              />
+                            </label>
+                            {bahanBakuRows.length > 1 && (
+                              <button
+                                type="button"
+                                className="role-panel-bahan-remove"
+                                onClick={() => removeBahanBakuRow(row.id)}
+                                title="Hapus bahan baku ini"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
 
-                <label>
-                  Foto Menu (JPG/PNG)
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null
-                      setDistribusiPhoto({ menu: file })
-                    }}
-                  />
-                  {distribusiPhoto.menu && <span>File: {distribusiPhoto.menu.name}</span>}
-                </label>
+                      <button
+                        type="button"
+                        className="role-panel-bahan-add"
+                        onClick={addBahanBakuRow}
+                      >
+                        + Tambah Bahan Baku
+                      </button>
+                    </div>
+                    <label className="role-panel-inline-span-2">
+                      Deskripsi Menu
+                      <textarea value={menuForm.deskripsi ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, deskripsi: event.target.value }))} placeholder="Keterangan menu" required />
+                    </label>
+                    <label>
+                      Jumlah Porsi
+                      <input
+                        type="number"
+                        min="1"
+                        value={menuForm.jumlah ?? ''}
+                        onChange={(event) => setMenuForm((prev) => ({ ...prev, jumlah: event.target.value }))}
+                        placeholder="Contoh: 120"
+                      />
+                    </label>
+                    <label>
+                      Kalori
+                      <input type="number" min="0" value={menuForm.kalori ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, kalori: event.target.value }))} placeholder="Contoh: 550" />
+                    </label>
+                    <label>
+                      Protein
+                      <input type="number" min="0" value={menuForm.protein ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, protein: event.target.value }))} placeholder="Contoh: 25" />
+                    </label>
+                    <label>
+                      Karbohidrat
+                      <input type="number" min="0" value={menuForm.karbohidrat ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, karbohidrat: event.target.value }))} placeholder="Contoh: 70" />
+                    </label>
+                    <label>
+                      Lemak
+                      <input type="number" min="0" value={menuForm.lemak ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, lemak: event.target.value }))} placeholder="Contoh: 15" />
+                    </label>
+                    <label className="role-panel-inline-span-2">
+                      Foto Menu (JPG/PNG)
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null
+                          setDistribusiPhoto({ menu: file })
+                        }}
+                      />
+                      {distribusiPhoto.menu && <span>File: {distribusiPhoto.menu.name}</span>}
+                    </label>
+                  </div>
+                </div>
+
+                <div className="role-panel-inline-card role-panel-full">
+                  <h3>Sekolah Tujuan</h3>
+                  <p>Centang sekolah yang menerima distribusi, lalu isi porsi untuk masing-masing sekolah.</p>
+                  <div className="role-panel-school-list">
+                    {schoolOptions.length === 0 ? (
+                      <div className="role-panel-empty role-panel-school-empty">Belum ada sekolah yang terhubung ke akun ini.</div>
+                    ) : schoolOptions.map((school) => {
+                      const isSelected = Object.prototype.hasOwnProperty.call(schoolAllocationForm, String(school.id))
+
+                      return (
+                        <label key={school.id} className={`role-panel-school-item ${isSelected ? 'selected' : ''}`}>
+                          <div className="role-panel-school-meta">
+                            <input type="checkbox" checked={isSelected} onChange={(event) => toggleSchoolAllocation(school.id, event.target.checked)} />
+                            <span>
+                              <strong>{school.nama_sekolah}</strong>
+                              <small>{school.jenis_sekolah ?? 'Sekolah'}</small>
+                            </span>
+                          </div>
+                              <div className="role-panel-school-porsi-and-note">
+                                <div className="role-panel-school-porsi">
+                                  <span>Porsi</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    disabled={!isSelected}
+                                    value={schoolAllocationForm[String(school.id)]?.porsi ?? ''}
+                                    onChange={(event) => setSchoolAllocationForm((prev) => ({ ...prev, [String(school.id)]: { ...(prev[String(school.id)] ?? { porsi: '', catatan: '' }), porsi: event.target.value } }))}
+                                    placeholder="Jumlah porsi"
+                                  />
+                                </div>
+
+                                <div className="role-panel-school-note">
+                                  <span>Catatan</span>
+                                  <textarea
+                                    disabled={!isSelected}
+                                    value={schoolAllocationForm[String(school.id)]?.catatan ?? ''}
+                                    onChange={(event) => setSchoolAllocationForm((prev) => ({ ...prev, [String(school.id)]: { ...(prev[String(school.id)] ?? { porsi: '', catatan: '' }), catatan: event.target.value } }))}
+                                    placeholder="Catatan per sekolah (opsional)"
+                                  />
+                                </div>
+                              </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
 
                 <button type="submit" className="role-panel-button" disabled={savingReport}>
                   {savingReport ? 'Menyimpan...' : 'Simpan Distribusi'}
                 </button>
               </form>
-            </div>
-          )}
-
-          {activeTab === 'menu' && (
-            <div className="role-panel-card role-panel-full">
-              <header className="role-panel-card-head">
-                <div>
-                  <h2>Manajemen Menu</h2>
-                  <p>Buat dan kelola menu yang dapat dipilih saat input distribusi.</p>
-                </div>
-              </header>
-
-              <form className="role-panel-form" onSubmit={handleMenuSubmit}>
-                <label>
-                  Kategori
-                  <input type="text" value={menuForm.kategori ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, kategori: event.target.value }))} placeholder="Contoh: Menu Utama, Menu Harian, dll" />
-                </label>
-                <label>
-                  Deskripsi
-                  <textarea value={menuForm.deskripsi ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, deskripsi: event.target.value }))} placeholder="Keterangan menu" required />
-                </label>
-                <label>
-                  Kalori
-                  <input type="number" min="0" value={menuForm.kalori ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, kalori: event.target.value }))} placeholder="Contoh: 550" />
-                </label>
-                <label>
-                  Protein
-                  <input type="number" min="0" value={menuForm.protein ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, protein: event.target.value }))} placeholder="Contoh: 25" />
-                </label>
-                <label>
-                  Karbohidrat
-                  <input type="number" min="0" value={menuForm.karbohidrat ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, karbohidrat: event.target.value }))} placeholder="Contoh: 70" />
-                </label>
-                <label>
-                  Lemak
-                  <input type="number" min="0" value={menuForm.lemak ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, lemak: event.target.value }))} placeholder="Contoh: 15" />
-                </label>
-                <label>
-                  Jumlah
-                  <input type="number" min="0" value={menuForm.jumlah ?? ''} onChange={(event) => setMenuForm((prev) => ({ ...prev, jumlah: event.target.value }))} placeholder="Contoh: 1" />
-                </label>
-
-                <button type="submit" className="role-panel-button" disabled={savingMenu}>
-                  {savingMenu ? 'Menyimpan...' : 'Tambah Menu'}
-                </button>
-              </form>
-
-              <div style={{ marginTop: 30 }}>
-                <h3>Daftar Menu</h3>
-                {(panel?.options.menus ?? []).length === 0 ? (
-                  <p style={{ color: '#999' }}>Belum ada menu. Buat menu baru untuk menampilkan di sini.</p>
-                ) : (
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #ddd' }}>
-                        <th style={{ padding: 10, textAlign: 'left' }}>Kode Menu</th>
-                        <th style={{ padding: 10, textAlign: 'left' }}>Deskripsi</th>
-                        <th style={{ padding: 10, textAlign: 'left' }}>Kategori</th>
-                        <th style={{ padding: 10, textAlign: 'left' }}>Kalori</th>
-                        <th style={{ padding: 10, textAlign: 'left' }}>Protein</th>
-                        <th style={{ padding: 10, textAlign: 'left' }}>Karbohidrat</th>
-                        <th style={{ padding: 10, textAlign: 'left' }}>Lemak</th>
-                        <th style={{ padding: 10, textAlign: 'left' }}>Jumlah</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(panel?.options.menus ?? []).map((menu: any) => (
-                        <tr key={menu.id} style={{ borderBottom: '1px solid #eee' }}>
-                          <td style={{ padding: 10 }}>{menu.code ?? menu.id}</td>
-                          <td style={{ padding: 10 }}>{menu.deskripsi || '-'}</td>
-                          <td style={{ padding: 10 }}>{menu.kategori || '-'}</td>
-                          <td style={{ padding: 10 }}>{menu.kalori ?? '-'}</td>
-                          <td style={{ padding: 10 }}>{menu.protein ?? '-'}</td>
-                          <td style={{ padding: 10 }}>{menu.karbohidrat ?? '-'}</td>
-                          <td style={{ padding: 10 }}>{menu.lemak ?? '-'}</td>
-                          <td style={{ padding: 10 }}>{menu.jumlah ?? '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
             </div>
           )}
 

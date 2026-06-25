@@ -122,12 +122,23 @@ function resolveImageUrl(value: string | null | undefined) {
     return value
   }
 
-  return `http://127.0.0.1:8000${value.startsWith('/') ? value : `/${value}`}`
+  const normalized = value.startsWith('/') ? value : `/${value}`
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'
+
+  return `${origin}${normalized}`
 }
 
 function formatDistribusiDate(value: string) {
   const date = safeDate(`${value}T00:00:00`)
   return date ? fullDateFormatter.format(date) : value
+}
+
+function formatCoordinate(value: number | null) {
+  if (value === null || Number.isNaN(value)) {
+    return '-'
+  }
+
+  return value.toFixed(6)
 }
 
 export default function SchoolDetailPage() {
@@ -183,6 +194,12 @@ export default function SchoolDetailPage() {
   const formattedAddress = useMemo(() => {
     return school ? formatStreetAddress(school.alamat) : '-'
   }, [school])
+
+  const mapEmbedUrl = school?.location.mapUrl ?? null
+  const mapLink = school?.location.mapsLink ?? null
+  const coordinateLabel = school
+    ? `${formatCoordinate(school.location.latitude)}, ${formatCoordinate(school.location.longitude)}`
+    : '-'
 
   const clearFilter = () => {
     setSearchMenu('')
@@ -313,6 +330,40 @@ export default function SchoolDetailPage() {
                         <div>
                           <h4>Alamat Lengkap</h4>
                           <p>{school.alamat}</p>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="panel-card panel-card-blue map-panel-card">
+                      <header className="panel-title-row">
+                        <h3>Lokasi Sekolah</h3>
+                        <span className="status-pill">Peta</span>
+                      </header>
+                      <div className="map-card school-map-card">
+                        {mapEmbedUrl ? (
+                          <iframe
+                            className="school-map-frame"
+                            title={`Peta lokasi ${school.name}`}
+                            src={mapEmbedUrl}
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                          />
+                        ) : (
+                          <div className="map-placeholder">
+                            <div className="map-icon" aria-hidden="true">⌖</div>
+                            <strong>Koordinat tidak tersedia</strong>
+                            <p>Lokasi sekolah belum memiliki titik peta yang valid.</p>
+                          </div>
+                        )}
+                        <div className="school-map-footer">
+                          <div>
+                            <div className="sppg-map-label">Koordinat</div>
+                            <div className="sppg-map-value">{coordinateLabel}</div>
+                            <div className="contact-meta">{school.location.address || school.alamat}</div>
+                          </div>
+                          <a className="map-action" href={mapLink ?? `https://www.openstreetmap.org/search?query=${encodeURIComponent(school.alamat)}`} target="_blank" rel="noreferrer">
+                            Buka peta
+                          </a>
                         </div>
                       </div>
                     </section>
@@ -500,6 +551,13 @@ export default function SchoolDetailPage() {
                                     </div>
                                   </div>
                                 </div>
+
+                                <div className="school-report-card-summary">
+                                  <span><strong>{report.jumlahPenerima ?? '-'}</strong> Penerima</span>
+                                  <span><strong>{report.jumlahDikonsumsi ?? '-'}</strong> Dikonsumsi</span>
+                                  <span><strong>{report.sisa ?? '-'}</strong> Sisa</span>
+                                </div>
+
                                 <span className={`school-report-collapse ${isExpanded ? 'is-open' : ''}`} aria-hidden="true">
                                   {isExpanded ? '⌄' : '⌃'}
                                 </span>
@@ -527,6 +585,17 @@ export default function SchoolDetailPage() {
                                         <p><strong>Lokasi:</strong> {report.lokasi.alamat}</p>
                                       </div>
                                     </div>
+
+                                    <div className="school-report-detail-box">
+                                      <div className="school-report-detail-icon is-blue">DP</div>
+                                      <div>
+                                        <h5>Data Konsumsi</h5>
+                                        <p><strong>Jumlah Penerima:</strong> {report.jumlahPenerima ?? '-'}</p>
+                                        <p><strong>Jumlah Dikonsumsi:</strong> {report.jumlahDikonsumsi ?? '-'}</p>
+                                        <p><strong>Sisa:</strong> {report.sisa ?? '-'}</p>
+                                        {report.keterangan && <p><strong>Keterangan:</strong> {report.keterangan}</p>}
+                                      </div>
+                                    </div>
                                   </div>
 
                                   <div className="school-report-photos-head">
@@ -540,7 +609,14 @@ export default function SchoolDetailPage() {
                                         <span>Foto Menu</span>
                                       </div>
                                       {menuUrl ? (
-                                        <img src={menuUrl} alt={`Foto menu laporan ${report.tanggal}`} />
+                                        <img src={menuUrl} alt={`Foto menu laporan ${report.tanggal}`} loading="lazy" onError={(event) => {
+                                          const target = event.currentTarget
+                                          target.style.display = 'none'
+                                          const wrapper = target.parentElement
+                                          if (wrapper) {
+                                            wrapper.innerHTML = '<div class="school-report-photo-empty">Foto menu tidak dapat dimuat</div>'
+                                          }
+                                        }} />
                                       ) : (
                                         <div className="school-report-photo-empty">Tidak ada foto menu</div>
                                       )}
@@ -551,7 +627,14 @@ export default function SchoolDetailPage() {
                                         <span>Foto Siswa</span>
                                       </div>
                                       {siswaUrl ? (
-                                        <img src={siswaUrl} alt={`Foto siswa laporan ${report.tanggal}`} />
+                                        <img src={siswaUrl} alt={`Foto siswa laporan ${report.tanggal}`} loading="lazy" onError={(event) => {
+                                          const target = event.currentTarget
+                                          target.style.display = 'none'
+                                          const wrapper = target.parentElement
+                                          if (wrapper) {
+                                            wrapper.innerHTML = '<div class="school-report-photo-empty">Foto siswa tidak dapat dimuat</div>'
+                                          }
+                                        }} />
                                       ) : (
                                         <div className="school-report-photo-empty">Tidak ada foto siswa</div>
                                       )}

@@ -568,6 +568,74 @@
   padding-top: 1.25rem;
 }
 
+.reports-map-embed {
+  margin-top: 1.5rem;
+  border: 1px solid #d7deeb;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.reports-map-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.reports-map-head h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.reports-map-open-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.reports-map-open-link:hover {
+  background: #dbeafe;
+}
+
+.reports-map-caption,
+.reports-map-note {
+  margin: 0;
+  color: #475569;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.reports-map-note {
+  color: #64748b;
+}
+
+.reports-map-frame-wrap {
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.reports-map-frame {
+  width: 100%;
+  min-height: 460px;
+  border: 0;
+  display: block;
+}
+
 .list-header {
   display: flex;
   justify-content: space-between;
@@ -728,6 +796,46 @@
 
 .school-item:last-child {
   border-bottom: none;
+}
+
+/* Live map section (homepage) */
+.live-map-section {
+  margin-top: 1.5rem;
+  border: 1px solid #d7deeb;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 1rem;
+  display: grid;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 1400px; /* match reports container width */
+  margin-left: auto;
+  margin-right: auto;
+}
+.live-map-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+.live-map-head h2 { margin: 0; color: #0f172a; font-size: 1.05rem; font-weight:700 }
+.live-map-open-link { display: inline-flex; align-items:center; padding:0.4rem 0.65rem; border-radius:10px; background:#eff6ff; border:1px solid #93c5fd; color:#1d4ed8; font-weight:700; text-decoration:none }
+.live-map-caption { margin: 0; color: #475569; font-size: 0.88rem }
+.live-map-frame-wrap {
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+.live-map-frame {
+  width: 100%;
+  min-height: 560px; /* increased slightly per request */
+  border: 0;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .live-map-frame { min-height: 420px }
 }
 
 .school-item-wrapper {
@@ -898,5 +1006,18 @@
   .list-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .reports-map-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .reports-map-open-link {
+    width: 100%;
+  }
+
+  .reports-map-frame {
+    min-height: 340px;
   }
 }

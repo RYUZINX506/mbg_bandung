@@ -482,6 +482,8 @@ export default function Reports() {
                 </div>
               )}
             </div>
+
+            {/* Map embed moved to homepage as a separate section */}
             
           </div>
         </div>

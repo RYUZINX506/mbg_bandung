@@ -130,12 +130,14 @@ class PanelController extends Controller
 
         $validated = $request->validate([
             'tanggal' => ['required', 'date'],
+            'sppg_id' => ['required', 'integer', 'exists:sppg,id'],
             'jumlah_penerima' => ['nullable', 'integer', 'min:0'],
             'jumlah_dikonsumsi' => ['nullable', 'integer', 'min:0'],
             'sisa' => ['nullable', 'integer', 'min:0'],
             'keterangan' => ['nullable', 'string'],
             'foto_menu' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
             'foto_siswa_makan' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
+            'foto_porsi_rusak' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png', 'max:5120'],
         ]);
 
         if (! $user->sekolah_id) {
@@ -156,10 +158,31 @@ class PanelController extends Controller
             return response()->json(['message' => 'Data sekolah tidak ditemukan.'], 422);
         }
 
+        $isLinkedSppg = DB::table('laporan_sppg')
+            ->where('sekolah_id', $user->sekolah_id)
+            ->where('sppg_id', $validated['sppg_id'])
+            ->exists();
+
+        if (! $isLinkedSppg) {
+            return response()->json(['message' => 'SPPG yang dipilih tidak terhubung dengan sekolah ini.'], 422);
+        }
+
+        $damagedPortion = (int) ($validated['sisa'] ?? 0);
+        if ($damagedPortion > 0 && ! $request->hasFile('foto_porsi_rusak')) {
+            return response()->json(['message' => 'Foto porsi rusak wajib diunggah jika jumlah porsi rusak diisi.'], 422);
+        }
+
+        if ($damagedPortion === 0 && $request->hasFile('foto_porsi_rusak')) {
+            return response()->json(['message' => 'Isi jumlah porsi rusak jika mengunggah foto porsi rusak.'], 422);
+        }
+
         $menuPath = $request->file('foto_menu')->store('reports/school/menu', 'public');
         $studentPath = $request->file('foto_siswa_makan')->store('reports/school/student', 'public');
+        $damagedPath = $request->hasFile('foto_porsi_rusak')
+            ? $request->file('foto_porsi_rusak')->store('reports/school/damaged', 'public')
+            : null;
 
-        DB::transaction(function () use ($user, $school, $validated, $menuPath, $studentPath): void {
+        DB::transaction(function () use ($user, $school, $validated, $menuPath, $studentPath, $damagedPath): void {
             $reportId = DB::table('laporan_sekolah')->insertGetId([
                 'sekolah_id' => $user->sekolah_id,
                 'tanggal' => $validated['tanggal'],
@@ -184,7 +207,7 @@ class PanelController extends Controller
                 ]
             );
 
-            DB::table('file_path')->insert([
+            $files = [
                 [
                     'laporan_sekolah_id' => $reportId,
                     'jenis' => 'menu',
@@ -197,7 +220,18 @@ class PanelController extends Controller
                     'file' => $studentPath,
                     'created_at' => now(),
                 ],
-            ]);
+            ];
+
+            if ($damagedPath) {
+                $files[] = [
+                    'laporan_sekolah_id' => $reportId,
+                    'jenis' => 'porsi_rusak',
+                    'file' => $damagedPath,
+                    'created_at' => now(),
+                ];
+            }
+
+            DB::table('file_path')->insert($files);
         });
 
         return response()->json(['message' => 'Laporan sekolah berhasil disimpan.'], 201);
@@ -216,21 +250,58 @@ class PanelController extends Controller
         }
 
         $validated = $request->validate([
-            'sekolah_id' => ['required', 'integer', 'exists:sekolah,id'],
             'tanggal' => ['required', 'date'],
-            'porsi_distribusi' => ['nullable', 'integer', 'min:0'],
-            'status_delivery' => ['nullable', 'string', 'max:100'],
-            'status_terkirim' => ['nullable', 'string', 'max:100'],
+            'sekolah_id' => ['nullable', 'integer', 'exists:sekolah,id'],
+            'porsi_distribusi' => ['nullable', 'integer', 'min:1'],
             'menu_id' => ['nullable', 'integer', 'exists:menu,id'],
+            'menu' => ['nullable', 'array'],
+            'menu.deskripsi' => ['required_without:menu_id', 'string'],
+            'menu.bahan_baku_id' => ['nullable', 'integer', 'exists:bahanbaku,id'],
+            'bahan_baku' => ['nullable', 'array'],
+            'bahan_baku.*.nama' => ['nullable', 'string', 'max:191'],
+            'bahan_baku.*.jumlah' => ['nullable', 'string', 'max:191'],
+            'menu.kalori' => ['nullable', 'integer', 'min:0'],
+            'menu.protein' => ['nullable', 'integer', 'min:0'],
+            'menu.karbohidrat' => ['nullable', 'integer', 'min:0'],
+            'menu.lemak' => ['nullable', 'integer', 'min:0'],
+            'menu.jumlah' => ['nullable', 'integer', 'min:1'],
+            'distributions' => ['nullable', 'array'],
+            'distributions.*.sekolah_id' => ['required_with:distributions', 'integer', 'exists:sekolah,id'],
+            'distributions.*.porsi_distribusi' => ['required_with:distributions', 'integer', 'min:1'],
+            'distributions.*.keterangan' => ['nullable', 'string'],
         ]);
 
         if (! $user->sppg_id) {
             return response()->json(['message' => 'Akun SPPG belum terhubung ke data SPPG.'], 422);
         }
 
+        $distributionItems = collect($validated['distributions'] ?? [])->map(function (array $item): array {
+            return [
+                'sekolah_id' => (int) $item['sekolah_id'],
+                'porsi_distribusi' => (int) $item['porsi_distribusi'],
+            ];
+        })->keyBy('sekolah_id')->values()->all();
+
+        if ($distributionItems === [] && ! empty($validated['sekolah_id'] ?? null)) {
+            if (! isset($validated['porsi_distribusi']) || (int) $validated['porsi_distribusi'] < 1) {
+                return response()->json(['message' => 'Porsi distribusi wajib diisi.'], 422);
+            }
+
+            $distributionItems[] = [
+                'sekolah_id' => (int) $validated['sekolah_id'],
+                'porsi_distribusi' => (int) $validated['porsi_distribusi'],
+            ];
+        }
+
+        if ($distributionItems === []) {
+            return response()->json(['message' => 'Pilih minimal satu sekolah untuk distribusi.'], 422);
+        }
+
+        $menuPayload = is_array($validated['menu'] ?? null) ? $validated['menu'] : [];
+
         // Verify menu_id belongs to this SPPG if provided. If the menu table
         // doesn't have `sppg_id` (older migrations), fall back to basic existence check.
-        if ($validated['menu_id']) {
+        if (! empty($validated['menu_id'] ?? null)) {
             if (Schema::hasColumn('menu', 'sppg_id')) {
                 $menuExists = DB::table('menu')
                     ->where('id', $validated['menu_id'])
@@ -247,20 +318,122 @@ class PanelController extends Controller
             }
         }
 
-        $laporanSppg = DB::table('laporan_sppg')->insertGetId([
-            'sppg_id' => $user->sppg_id,
-            'sekolah_id' => $validated['sekolah_id'],
-            'tanggal' => $validated['tanggal'],
-            'porsi_distribusi' => $validated['porsi_distribusi'] ?? null,
-            'menu_id' => $validated['menu_id'] ?? null,
-            'status_delivery' => $validated['status_delivery'] ?? null,
-            'status_terkirim' => $validated['status_terkirim'] ?? null,
-            'distributed_by' => $user->id,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $fotoMenuPath = null;
+        if ($request->hasFile('foto_menu')) {
+            $fotoMenuPath = $request->file('foto_menu')->store('reports/sppg/menu', 'public');
+        }
 
-        return response()->json(['message' => 'Laporan distribusi berhasil disimpan.'], 201);
+        $totalDistributions = DB::transaction(function () use ($user, $validated, $distributionItems, $menuPayload, $fotoMenuPath): int {
+            $menuId = $validated['menu_id'] ?? null;
+            $persistedBahanBakuIds = [];
+            $selectedMenu = null;
+
+            foreach ($validated['bahan_baku'] ?? [] as $bahanBakuInput) {
+                if (! is_array($bahanBakuInput)) {
+                    continue;
+                }
+
+                $nama = trim((string) ($bahanBakuInput['nama'] ?? ''));
+
+                if ($nama === '') {
+                    continue;
+                }
+
+                $jumlah = trim((string) ($bahanBakuInput['jumlah'] ?? ''));
+
+                $existingBahanBaku = DB::table('bahanbaku')
+                    ->whereRaw('LOWER(TRIM(nama)) = ?', [mb_strtolower($nama)])
+                    ->first(['id']);
+
+                if ($existingBahanBaku) {
+                    $persistedBahanBakuIds[] = (int) $existingBahanBaku->id;
+                    continue;
+                }
+
+                $bahanBakuInsert = [
+                    'nama' => $nama,
+                    'ketersediaan' => $jumlah !== '' ? $jumlah : null,
+                    'deskripsi' => 'Diinput dari laporan distribusi',
+                ];
+
+                if (Schema::hasColumn('bahanbaku', 'created_at')) {
+                    $bahanBakuInsert['created_at'] = now();
+                }
+
+                if (Schema::hasColumn('bahanbaku', 'updated_at')) {
+                    $bahanBakuInsert['updated_at'] = now();
+                }
+
+                $insertedId = DB::table('bahanbaku')->insertGetId($bahanBakuInsert);
+
+                $persistedBahanBakuIds[] = (int) $insertedId;
+            }
+
+            if ($menuId) {
+                $selectedMenu = DB::table('menu')
+                    ->where('id', $menuId)
+                    ->first(['kalori', 'protein', 'karbohidrat', 'lemak']);
+            }
+
+            if (! $menuId && filled($menuPayload['deskripsi'] ?? null)) {
+                $menuInsert = [
+                    'deskripsi' => $menuPayload['deskripsi'],
+                    'kalori' => $menuPayload['kalori'] ?? null,
+                    'protein' => $menuPayload['protein'] ?? null,
+                    'karbohidrat' => $menuPayload['karbohidrat'] ?? null,
+                    'lemak' => $menuPayload['lemak'] ?? null,
+                    'jumlah' => $menuPayload['jumlah'] ?? null,
+                ];
+
+                if (Schema::hasColumn('menu', 'sppg_id')) {
+                    $menuInsert['sppg_id'] = $user->sppg_id;
+                }
+
+                if (Schema::hasColumn('menu', 'bahan_baku_id')) {
+                    $menuInsert['bahan_baku_id'] = $persistedBahanBakuIds[0] ?? ($menuPayload['bahan_baku_id'] ?? null);
+                }
+
+                $menuId = DB::table('menu')->insertGetId($menuInsert);
+
+                DB::table('menu')
+                    ->where('id', $menuId)
+                    ->update(['code' => (string) $menuId]);
+            }
+
+            $bahanBakuId = $menuPayload['bahan_baku_id'] ?? $persistedBahanBakuIds[0] ?? null;
+            $nutritionPayload = [
+                'kalori' => $selectedMenu?->kalori ?? $menuPayload['kalori'] ?? null,
+                'protein' => $selectedMenu?->protein ?? $menuPayload['protein'] ?? null,
+                'karbo' => $selectedMenu?->karbohidrat ?? $menuPayload['karbohidrat'] ?? null,
+                'lemak' => $selectedMenu?->lemak ?? $menuPayload['lemak'] ?? null,
+            ];
+
+            foreach ($distributionItems as $distributionItem) {
+                DB::table('laporan_sppg')->insert([
+                    'sppg_id' => $user->sppg_id,
+                    'sekolah_id' => $distributionItem['sekolah_id'],
+                    'bahan_baku_id' => $bahanBakuId,
+                    'tanggal' => $validated['tanggal'],
+                    'porsi_distribusi' => $distributionItem['porsi_distribusi'],
+                    'kalori' => $nutritionPayload['kalori'],
+                    'protein' => $nutritionPayload['protein'],
+                    'karbo' => $nutritionPayload['karbo'],
+                    'lemak' => $nutritionPayload['lemak'],
+                    'menu_id' => $menuId,
+                    'keterangan' => $distributionItem['keterangan'] ?? null,
+                    'foto_menu' => $fotoMenuPath,
+                    'distributed_by' => $user->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            return count($distributionItems);
+        });
+
+        return response()->json([
+            'message' => "Laporan distribusi berhasil disimpan untuk {$totalDistributions} sekolah.",
+        ], 201);
     }
 
     private function resolveUser(Request $request)
@@ -412,9 +585,21 @@ class PanelController extends Controller
     {
         $kecamatan = DB::table('kecamatan')->orderBy('nama_kecamatan')->get(['id', 'nama_kecamatan']);
         $jenisDapur = DB::table('jenis_dapur')->orderBy('nama')->get(['id', 'nama']);
+        $bahanBaku = DB::table('bahanbaku')->orderBy('nama')->get(['id', 'nama']);
         $sekolah = DB::table('sekolah')->orderBy('nama_sekolah')->get(['id', 'nama_sekolah', 'jenis_sekolah', 'alamat']);
         
         $menus = [];
+        $sppg = [];
+        if ($user->role === 'sekolah' && $user->sekolah_id) {
+            $sppg = DB::table('laporan_sppg as ls')
+                ->join('sppg as s', 's.id', '=', 'ls.sppg_id')
+                ->where('ls.sekolah_id', $user->sekolah_id)
+                ->groupBy('s.id', 's.nama_sppg', 's.kode_sppg')
+                ->orderBy('s.nama_sppg')
+                ->get(['s.id', 's.nama_sppg', 's.kode_sppg'])
+                ->toArray();
+        }
+
         if ($user->role === 'sppg' && $user->sppg_id) {
             $query = DB::table('menu')->whereNull('distribusi_id');
             if (Schema::hasColumn('menu', 'sppg_id')) {
@@ -422,7 +607,7 @@ class PanelController extends Controller
             }
 
             $menus = $query->orderBy('id', 'desc')
-                ->get(['id', 'code', 'deskripsi', 'kategori', 'kalori', 'protein', 'karbohidrat', 'lemak', 'jumlah'])
+                ->get(['id', 'code', 'deskripsi', 'kalori', 'protein', 'karbohidrat', 'lemak', 'jumlah'])
                 ->toArray();
 
             $linkedSchools = DB::table('laporan_sppg as ls')
@@ -438,7 +623,9 @@ class PanelController extends Controller
         return [
             'kecamatan' => $kecamatan,
             'jenisDapur' => $jenisDapur,
+            'bahanBaku' => $bahanBaku,
             'sekolah' => $sekolah,
+            'sppg' => $sppg,
             'menus' => $menus,
             'role' => $user->role,
         ];
@@ -465,7 +652,6 @@ class PanelController extends Controller
 
         $validated = $request->validate([
             'deskripsi' => ['required', 'string'],
-            'kategori' => ['nullable', 'string', 'max:100'],
             'kalori' => ['nullable', 'integer', 'min:0'],
             'protein' => ['nullable', 'integer', 'min:0'],
             'karbohidrat' => ['nullable', 'integer', 'min:0'],
@@ -475,7 +661,6 @@ class PanelController extends Controller
 
         $insertData = [
             'deskripsi' => $validated['deskripsi'],
-            'kategori' => $validated['kategori'] ?? null,
             'kalori' => $validated['kalori'] ?? null,
             'protein' => $validated['protein'] ?? null,
             'karbohidrat' => $validated['karbohidrat'] ?? null,
@@ -496,6 +681,55 @@ class PanelController extends Controller
         return response()->json([
             'message' => 'Menu berhasil ditambahkan.',
             'id' => $menuId,
+        ], 201);
+    }
+
+    /**
+     * Add new bahan baku (allow SPPG to suggest/add)
+     */
+    public function storeBahanBaku(Request $request): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+
+        if (! $user) {
+            return response()->json(['message' => 'Unauthorized.'], 401);
+        }
+
+        if ($user->role !== 'sppg' && $user->role !== 'admin' && $user->role !== 'superadmin') {
+            return response()->json(['message' => 'Hanya SPPG atau admin yang dapat menambahkan bahan baku.'], 403);
+        }
+
+        $validated = $request->validate([
+            'nama' => ['required', 'string', 'max:191'],
+            'kategori' => ['nullable', 'string', 'max:191'],
+            'ketersediaan' => ['nullable', 'string', 'max:191'],
+        ]);
+
+        $nama = trim((string) ($validated['nama'] ?? ''));
+
+        if ($nama === '') {
+            return response()->json(['message' => 'Nama bahan baku wajib diisi.'], 422);
+        }
+
+        $existing = DB::table('bahanbaku')->whereRaw('LOWER(TRIM(nama)) = ?', [mb_strtolower($nama)])->exists();
+
+        if ($existing) {
+            return response()->json(['message' => 'Bahan baku dengan nama yang sama sudah ada.'], 422);
+        }
+
+        $insertId = DB::table('bahanbaku')->insertGetId([
+            'nama' => $nama,
+            'kategori' => trim((string) ($validated['kategori'] ?? '')) === '' ? null : trim((string) $validated['kategori']),
+            'ketersediaan' => trim((string) ($validated['ketersediaan'] ?? '')) === '' ? null : trim((string) $validated['ketersediaan']),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $record = DB::table('bahanbaku')->where('id', $insertId)->first(['id', 'nama', 'kategori', 'ketersediaan']);
+
+        return response()->json([
+            'message' => 'Bahan baku berhasil ditambahkan.',
+            'data' => $record,
         ], 201);
     }
 

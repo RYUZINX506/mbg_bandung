@@ -15,7 +15,10 @@ class HomeController extends Controller
         $totalSekolah = DB::table('sekolah')->count();
         $totalSekolahAktif = DB::table('sekolah as s')
             ->leftJoin('status_program as sp', 'sp.id', '=', 's.status_program_id')
-            ->whereRaw("LOWER(TRIM(COALESCE(sp.nama, ''))) = ?", ['aktif'])
+            ->where(function ($query): void {
+                $query->whereRaw("LOWER(TRIM(COALESCE(sp.nama, ''))) = ?", ['aktif'])
+                    ->orWhereNull('s.status_program_id');
+            })
             ->count();
 
         $activeSppgCount = DB::table('sppg')
@@ -33,7 +36,10 @@ class HomeController extends Controller
             ->join('sekolah as s', 's.id', '=', 'ls.sekolah_id')
             ->leftJoin('status_program as sp', 'sp.id', '=', 's.status_program_id')
             ->whereDate('ls.tanggal', $date)
-            ->whereRaw("LOWER(TRIM(COALESCE(sp.nama, ''))) = ?", ['aktif'])
+            ->where(function ($query): void {
+                $query->whereRaw("LOWER(TRIM(COALESCE(sp.nama, ''))) = ?", ['aktif'])
+                    ->orWhereNull('s.status_program_id');
+            })
             ->distinct('ls.sekolah_id')
             ->count('ls.sekolah_id');
 

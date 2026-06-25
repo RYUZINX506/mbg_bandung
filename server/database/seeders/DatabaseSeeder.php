@@ -14,6 +14,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(MbgDemoSeeder::class);
+        if (env('SEED_PRESET') === 'demo') {
+            $this->call(MbgDemoSeeder::class);
+
+            return;
+        }
+
+        $this->call(PresentationSeeder::class);
     }
 }

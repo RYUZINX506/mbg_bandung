@@ -107,6 +107,10 @@ class SchoolController extends Controller
                 'ls.tanggal',
                 'ls.menu_id',
                 'ls.porsi_distribusi',
+                'ls.kalori',
+                'ls.protein',
+                'ls.karbo',
+                'ls.lemak',
                 'selected_menu.deskripsi as selected_menu_deskripsi',
                 'selected_menu.kalori as selected_menu_kalori',
                 'selected_menu.protein as selected_menu_protein',
@@ -132,12 +136,37 @@ class SchoolController extends Controller
                     $menu = $legacyMenu;
                 }
 
+                $kalori = $first->kalori ?? $first->selected_menu_kalori;
+                $protein = $first->protein ?? $first->selected_menu_protein;
+                $karbo = $first->karbo ?? $first->selected_menu_karbohidrat;
+                $lemak = $first->lemak ?? $first->selected_menu_lemak;
+
+                if ($kalori === null) {
+                    $kalori = $first->legacy_menu_kalori;
+                }
+
+                if ($protein === null) {
+                    $protein = $first->legacy_menu_protein;
+                }
+
+                if ($karbo === null) {
+                    $karbo = $first->legacy_menu_karbohidrat;
+                }
+
+                if ($lemak === null) {
+                    $lemak = $first->legacy_menu_lemak;
+                }
+
                 return [
                     'id' => (int) $distribusiId,
                     'tanggal' => (string) $first->tanggal,
                     'menu' => $menu !== '' ? $menu : 'Menu belum diinput',
                     'porsi' => (int) ($first->porsi_distribusi ?? 0),
                     'jam' => '-',
+                    'kalori' => $kalori !== null ? (int) $kalori : null,
+                    'protein' => $protein !== null ? (int) $protein : null,
+                    'karbo' => $karbo !== null ? (int) $karbo : null,
+                    'lemak' => $lemak !== null ? (int) $lemak : null,
                 ];
             })
             ->values();
@@ -187,11 +216,15 @@ class SchoolController extends Controller
                         'akurasi' => $row->akurasi !== null ? (float) $row->akurasi : null,
                         'alamat' => $row->lokasi_alamat ?? $school->alamat ?? '-',
                     ],
-                    'fotoMenuUrl' => $row->foto_menu ? '/storage/' . $row->foto_menu : null,
-                    'fotoSiswaUrl' => $row->foto_siswa ? '/storage/' . $row->foto_siswa : null,
+                    'fotoMenuUrl' => $row->foto_menu ? '/storage/' . ltrim((string) $row->foto_menu, '/') : null,
+                    'fotoSiswaUrl' => $row->foto_siswa ? '/storage/' . ltrim((string) $row->foto_siswa, '/') : null,
                 ];
             })
             ->values();
+
+        $hasLocation = $school->latitude !== null && $school->longitude !== null;
+        $latitude = (float) $school->latitude;
+        $longitude = (float) $school->longitude;
 
         return response()->json([
             'data' => [
@@ -204,6 +237,26 @@ class SchoolController extends Controller
                 'alamat' => $school->alamat ?? '-',
                 'programStart' => $school->tanggal_bergabung,
                 'jumlahSiswa' => (int) ($school->total_siswa ?? 0),
+                'location' => [
+                    'latitude' => $hasLocation ? $latitude : null,
+                    'longitude' => $hasLocation ? $longitude : null,
+                    'address' => $school->alamat ?? '-',
+                    'district' => $school->nama_kecamatan ?? '-',
+                    'mapUrl' => $hasLocation
+                        ? sprintf(
+                            'https://www.openstreetmap.org/export/embed.html?bbox=%1$s,%2$s,%3$s,%4$s&layer=mapnik&marker=%5$s,%6$s',
+                            $longitude - 0.01,
+                            $latitude - 0.01,
+                            $longitude + 0.01,
+                            $latitude + 0.01,
+                            $latitude,
+                            $longitude,
+                        )
+                        : null,
+                    'mapsLink' => $hasLocation
+                        ? sprintf('https://www.openstreetmap.org/?mlat=%1$s&mlon=%2$s#map=17/%1$s/%2$s', $latitude, $longitude)
+                        : null,
+                ],
                 'sppg' => [
                     'id' => $primarySppg->id ?? null,
                     'name' => $primarySppg->nama_sppg ?? '-',

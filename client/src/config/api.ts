@@ -132,6 +132,14 @@ export type SchoolDetail = {
   alamat: string
   programStart: string | null
   jumlahSiswa: number
+  location: {
+    latitude: number | null
+    longitude: number | null
+    address: string
+    district: string
+    mapUrl: string | null
+    mapsLink: string | null
+  }
   sppg: {
     id: number | null
     name: string
@@ -326,11 +334,12 @@ export type PanelResponse = {
       kecamatan: Array<{ id: number; nama_kecamatan: string }>
       jenisDapur: Array<{ id: number; nama: string }>
       sekolah: Array<{ id: number; nama_sekolah: string; jenis_sekolah: string | null; alamat: string | null }>
+      bahanBaku?: Array<{ id: number; nama: string; kategori?: string | null; ketersediaan?: string | null }>
+      sppg?: Array<{ id: number; nama_sppg: string; kode_sppg: string | null }>
       menus?: Array<{
         id: number
         code: string
         deskripsi: string
-        kategori: string | null
         kalori: number | null
         protein: number | null
         karbohidrat: number | null

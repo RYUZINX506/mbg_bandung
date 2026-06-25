@@ -193,7 +193,7 @@ class SppgController extends Controller
                     'karbo' => $karbo !== null ? (int) $karbo : null,
                     'lemak' => $lemak !== null ? (int) $lemak : null,
                     'status' => $first->status_delivery ?? $first->status_terkirim ?? 'Aktif',
-                    'fotoMenuUrl' => $first->foto_menu ? url('/storage/' . $first->foto_menu) : null,
+                    'fotoMenuUrl' => $first->foto_menu ? '/storage/' . ltrim((string) $first->foto_menu, '/') : null,
                 ];
             })
             ->values();
@@ -252,8 +252,8 @@ class SppgController extends Controller
                             'akurasi' => $row->akurasi !== null ? (float) $row->akurasi : null,
                             'alamat' => $row->lokasi_alamat ?? '-',
                         ],
-                        'fotoMenuUrl' => $row->foto_menu ? url('/storage/' . $row->foto_menu) : null,
-                        'fotoSiswaUrl' => $row->foto_siswa ? url('/storage/' . $row->foto_siswa) : null,
+                        'fotoMenuUrl' => $row->foto_menu ? '/storage/' . ltrim((string) $row->foto_menu, '/') : null,
+                        'fotoSiswaUrl' => $row->foto_siswa ? '/storage/' . ltrim((string) $row->foto_siswa, '/') : null,
                     ];
                 })
                 ->values();

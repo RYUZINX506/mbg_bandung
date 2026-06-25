@@ -9,10 +9,26 @@ type ReportForm = Record<string, string>
 type SchoolPhotoState = {
   menu: File | null
   siswaMakan: File | null
+  porsiRusak: File | null
 }
 
 const emptyProfileForm = (): ProfileForm => ({})
-const emptyReportForm = (): ReportForm => ({})
+const getLocalDateString = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+const emptyReportForm = (): ReportForm => ({
+  tanggal: getLocalDateString(),
+  sppg_id: '',
+  jumlah_penerima: '',
+  jumlah_dikonsumsi: '',
+  sisa: '',
+})
 
 export default function SekolahPanelPage() {
   const navigate = useNavigate()
@@ -27,7 +43,9 @@ export default function SekolahPanelPage() {
   const [schoolPhotos, setSchoolPhotos] = useState<SchoolPhotoState>({
     menu: null,
     siswaMakan: null,
+    porsiRusak: null,
   })
+  const [showDamageModal, setShowDamageModal] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -91,6 +109,7 @@ export default function SekolahPanelPage() {
   const schoolAddress = String(panel?.profile.record?.alamat ?? 'Alamat belum tersedia')
 
   const recentReports = panel?.recent.reports ?? []
+  const linkedSppgOptions = panel?.options.sppg ?? []
 
   const handleProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -139,14 +158,42 @@ export default function SekolahPanelPage() {
         return
       }
 
+      if (!reportForm.sppg_id) {
+        setSavingReport(false)
+        setError('Pilih SPPG yang terhubung terlebih dahulu.')
+        return
+      }
+
+      if (!reportForm.jumlah_penerima?.trim()) {
+        setSavingReport(false)
+        setError('Jumlah siswa wajib diisi.')
+        return
+      }
+
+      if (!reportForm.jumlah_dikonsumsi?.trim()) {
+        setSavingReport(false)
+        setError('Jumlah dikonsumsi wajib diisi.')
+        return
+      }
+
+      const damagedPortion = Number(reportForm.sisa || '0')
+      if (!Number.isNaN(damagedPortion) && damagedPortion > 0 && !schoolPhotos.porsiRusak) {
+        setSavingReport(false)
+        setError('Foto porsi rusak wajib diunggah jika jumlah porsi rusak diisi.')
+        return
+      }
+
       const formData = new FormData()
-      formData.append('tanggal', reportForm.tanggal ?? '')
+      formData.append('tanggal', reportForm.tanggal ?? getLocalDateString())
+      formData.append('sppg_id', reportForm.sppg_id ?? '')
       formData.append('jumlah_penerima', reportForm.jumlah_penerima ?? '')
       formData.append('jumlah_dikonsumsi', reportForm.jumlah_dikonsumsi ?? '')
       formData.append('sisa', reportForm.sisa ?? '')
-      formData.append('keterangan', reportForm.keterangan ?? '')
       formData.append('foto_menu', schoolPhotos.menu)
       formData.append('foto_siswa_makan', schoolPhotos.siswaMakan)
+      if (schoolPhotos.porsiRusak) {
+        formData.append('foto_porsi_rusak', schoolPhotos.porsiRusak)
+      }
 
       const response = await apiRequest<{ message: string }>('/panel/report', {
         method: 'POST',
@@ -158,7 +205,8 @@ export default function SekolahPanelPage() {
 
       setMessage(response.message)
       setReportForm(emptyReportForm())
-      setSchoolPhotos({ menu: null, siswaMakan: null })
+      setSchoolPhotos({ menu: null, siswaMakan: null, porsiRusak: null })
+      setShowDamageModal(false)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Gagal menyimpan laporan.')
     } finally {
@@ -279,26 +327,31 @@ export default function SekolahPanelPage() {
               </header>
 
               <form className="role-panel-form" onSubmit={handleReportSubmit}>
+                <input type="hidden" value={reportForm.tanggal ?? getLocalDateString()} readOnly />
+
                 <label>
-                  Tanggal
-                  <input type="date" value={reportForm.tanggal ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, tanggal: event.target.value }))} />
+                  Pilih SPPG Terhubung
+                  <select
+                    value={reportForm.sppg_id ?? ''}
+                    onChange={(event) => setReportForm((prev) => ({ ...prev, sppg_id: event.target.value }))}
+                    required
+                  >
+                    <option value="">Pilih SPPG</option>
+                    {linkedSppgOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.nama_sppg}{item.kode_sppg ? ` (${item.kode_sppg})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label>
-                  Jumlah Penerima
-                  <input type="number" value={reportForm.jumlah_penerima ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, jumlah_penerima: event.target.value }))} />
+                  Jumlah Siswa
+                  <input type="number" min="0" value={reportForm.jumlah_penerima ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, jumlah_penerima: event.target.value }))} required />
                 </label>
                 <label>
                   Jumlah Dikonsumsi
-                  <input type="number" value={reportForm.jumlah_dikonsumsi ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, jumlah_dikonsumsi: event.target.value }))} />
-                </label>
-                <label>
-                  Sisa
-                  <input type="number" value={reportForm.sisa ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, sisa: event.target.value }))} />
-                </label>
-                <label>
-                  Keterangan
-                  <textarea value={reportForm.keterangan ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, keterangan: event.target.value }))} />
+                  <input type="number" min="0" value={reportForm.jumlah_dikonsumsi ?? ''} onChange={(event) => setReportForm((prev) => ({ ...prev, jumlah_dikonsumsi: event.target.value }))} required />
                 </label>
                 <label>
                   Foto Menu (JPG/PNG)
@@ -325,10 +378,80 @@ export default function SekolahPanelPage() {
                   />
                 </label>
 
+                <div className="role-panel-inline-card role-panel-full">
+                  <div className="role-panel-damage-head">
+                    <div className="role-panel-damage-copy">
+                      <h3>Porsi Rusak (Opsional)</h3>
+                      <p>Klik tombol input jika ada porsi rusak. Jika tidak ada, boleh dilewati.</p>
+                    </div>
+                    <button type="button" className="role-panel-button role-panel-button-secondary" onClick={() => setShowDamageModal(true)}>
+                      Input Porsi Rusak
+                    </button>
+                  </div>
+
+                  {reportForm.sisa ? (
+                    <p className="role-panel-damage-summary role-panel-damage-summary-active">
+                      Tercatat porsi rusak: <strong>{reportForm.sisa}</strong>
+                      {schoolPhotos.porsiRusak ? `, foto: ${schoolPhotos.porsiRusak.name}` : ', foto belum dipilih'}
+                    </p>
+                  ) : (
+                    <p className="role-panel-damage-summary">Belum ada input porsi rusak.</p>
+                  )}
+                </div>
+
                 <button type="submit" className="role-panel-button" disabled={savingReport}>
                   {savingReport ? 'Menyimpan...' : 'Simpan Laporan'}
                 </button>
               </form>
+
+              {showDamageModal && (
+                <div className="role-panel-modal-backdrop" role="dialog" aria-modal="true" aria-label="Input porsi rusak">
+                  <div className="role-panel-modal">
+                    <h3>Input Porsi Rusak</h3>
+                    <p>Isi hanya jika ada porsi rusak pada distribusi hari ini.</p>
+
+                    <label>
+                      Jumlah Porsi Rusak
+                      <input
+                        type="number"
+                        min="0"
+                        value={reportForm.sisa ?? ''}
+                        onChange={(event) => setReportForm((prev) => ({ ...prev, sisa: event.target.value }))}
+                        placeholder="Contoh: 3"
+                      />
+                    </label>
+
+                    <label>
+                      Foto Porsi Rusak (JPG/PNG)
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null
+                          setSchoolPhotos((prev) => ({ ...prev, porsiRusak: file }))
+                        }}
+                      />
+                    </label>
+
+                    <div className="role-panel-modal-actions">
+                      <button type="button" className="role-panel-button role-panel-button-secondary" onClick={() => setShowDamageModal(false)}>
+                        Simpan & Tutup
+                      </button>
+                      <button
+                        type="button"
+                        className="role-panel-button role-panel-button-ghost"
+                        onClick={() => {
+                          setReportForm((prev) => ({ ...prev, sisa: '' }))
+                          setSchoolPhotos((prev) => ({ ...prev, porsiRusak: null }))
+                          setShowDamageModal(false)
+                        }}
+                      >
+                        Hapus Input
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -348,7 +471,7 @@ export default function SekolahPanelPage() {
                       <th>Tanggal</th>
                       <th>Penerima</th>
                       <th>Dikonsumsi</th>
-                      <th>Sisa</th>
+                      <th>Porsi Rusak</th>
                       <th>Keterangan</th>
                       <th>Foto Menu</th>
                       <th>Foto Siswa</th>

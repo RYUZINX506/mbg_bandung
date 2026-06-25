@@ -66,7 +66,7 @@ Buat database jika belum ada:
 CREATE DATABASE backand;
 ```
 
-Lanjut migrasi + seed data demo:
+Lanjut migrasi + seed data presentasi:
 
 ```powershell
 php artisan migrate:fresh --seed
@@ -101,11 +101,13 @@ Contoh akun:
 
 - `superadmin@mbg.test` (superadmin)
 - `admin@mbg.test` (admin)
-- `gizi@mbg.test` (ahli_gizi)
-- `sppg@mbg.test` (sppg)
-- `sekolah@mbg.test` (sekolah)
+- `gizi.pres@mbg.test` (ahli_gizi)
+- `operator.sppg.pres@mbg.test` (sppg)
+- `operator.sekolah.pres@mbg.test` (sekolah)
 
-Sumber data akun: `server/database/seeders/MbgDemoSeeder.php`.
+Sumber data akun: `server/database/seeders/PresentationSeeder.php`.
+
+Kalau ingin kembali ke data demo lama, set `SEED_PRESET=demo` sebelum menjalankan `php artisan migrate:fresh --seed`.
 
 ## Menjalankan Keduanya Sekaligus
 

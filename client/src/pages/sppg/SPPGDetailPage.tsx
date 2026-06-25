@@ -50,7 +50,37 @@ function resolveImageUrl(value: string | null | undefined) {
     return value
   }
 
-  return `${window.location.origin}${value.startsWith('/') ? value : `/${value}`}`
+  const normalized = value.startsWith('/') ? value : `/${value}`
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'
+
+  return `${origin}${normalized}`
+}
+
+function renderImageOrFallback(url: string | null, alt: string, fallbackText: string) {
+  if (!url) {
+    return (
+      <div className="photo-empty">
+        <strong>{fallbackText}</strong>
+        <p>Foto belum tersedia untuk bagian ini.</p>
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={url}
+      alt={alt}
+      loading="lazy"
+      onError={(event) => {
+        const target = event.currentTarget
+        target.style.display = 'none'
+        const wrapper = target.parentElement
+        if (wrapper) {
+          wrapper.innerHTML = `<div class="photo-empty"><strong>${fallbackText}</strong><p>Foto tidak dapat dimuat.</p></div>`
+        }
+      }}
+    />
+  )
 }
 
 function formatCoordinate(value: number | null) {
@@ -324,13 +354,10 @@ export default function SPPGDetailPage() {
                   <div className="sppg-section sppg-info-photo">
                     <h2>Foto Dapur</h2>
                     <div className="photo-card">
-                      {detail.photos.length > 0 ? (
-                        <img src={resolveImageUrl(detail.photos[0]) ?? undefined} alt="Tampak dapur" />
-                      ) : (
-                        <div className="photo-empty">
-                          <strong>Tidak ada foto dapur tersedia</strong>
-                          <p>Foto akan ditampilkan di sini ketika sudah diunggah.</p>
-                        </div>
+                      {renderImageOrFallback(
+                        resolveImageUrl((detail as any).photos?.[0] ?? (detail as any).photoUrl ?? null),
+                        'Tampak dapur',
+                        'Tidak ada foto dapur tersedia'
                       )}
                     </div>
                   </div>
@@ -420,7 +447,7 @@ export default function SPPGDetailPage() {
                               </div>
                               <div className="distribution-menu-layout">
                                 <div className="distribution-menu-preview">
-                                    {item.fotoMenuUrl ? <img src={resolveImageUrl(item.fotoMenuUrl) ?? undefined} alt={`Foto menu ${item.sekolah}`} /> : <div className="distribution-menu-placeholder">Foto menu belum diinput</div>}
+                                    {renderImageOrFallback(resolveImageUrl(item.fotoMenuUrl ?? null), `Foto menu ${item.sekolah}`, 'Foto menu belum diinput')}
                                 </div>
 
                                 <div className="distribution-menu-content">

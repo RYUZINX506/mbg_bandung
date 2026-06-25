@@ -32,6 +32,8 @@ Route::get('/panel/distribution/{id}', [PanelController::class, 'showDistributio
 Route::get('/panel/menus', [PanelController::class, 'listMenus']);
 Route::post('/panel/menu', [PanelController::class, 'storeMenu']);
 Route::delete('/panel/menu/{menuId}', [PanelController::class, 'deleteMenu']);
+// Bahan baku (SPPG can add)
+Route::post('/panel/bahanbaku', [PanelController::class, 'storeBahanBaku']);
 
 Route::get('/admin/stats', [AdminDataController::class, 'stats']);
 Route::get('/admin/schema', [AdminDataController::class, 'schema']);
